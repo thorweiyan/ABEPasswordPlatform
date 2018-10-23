@@ -5,7 +5,7 @@ import (
 	"fmt"
 	pb "github.com/hyperledger/fabric/protos/peer"
 	"strconv"
-	"github.com/thorweiyan/ABEPasswordPlatform/backend/wrapper"
+	"github.com/thorweiyan/ABEPasswordPlatform/chaincodeImpl/wrapper"
 )
 
 type Chaincode struct {
@@ -94,7 +94,7 @@ func (t *Chaincode) put(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 	}
 }
 
-//args: get aa_id r s arg
+//args: method aa_id r s arg
 func (t *Chaincode) get(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 5 {
 		return shim.Error("Incorrect number of arguments. Expecting 5")
@@ -142,6 +142,7 @@ func (t *Chaincode) get(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 }
 
 //***************************  third level method  ***************************
+//args: r s aalist...
 func (t *Chaincode) putAAList(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	//AA初始化完了没
 	isInit, err := t.isAAInitialized(stub)
@@ -157,7 +158,7 @@ func (t *Chaincode) putAAList(stub shim.ChaincodeStubInterface, args []string) p
 	args = args[2:]
 	//执行存储命令
 	for i := range args {
-		err = stub.PutState("AA_"+strconv.Itoa(i), []byte(args[i]))
+		err = stub.PutState("AA_"+strconv.Itoa(i+1), []byte(args[i]))
 		if err != nil {
 			return shim.Error("Putting AAList: " + err.Error())
 		}
@@ -240,7 +241,7 @@ func (t *Chaincode) putUserTip(stub shim.ChaincodeStubInterface, args []string) 
 }
 
 
-
+//args:
 func (t *Chaincode) getAAList(stub shim.ChaincodeStubInterface, aaid string) ([]byte, error) {
 	aaListLength, err := stub.GetState("AAListLength")
 	if err != nil {
@@ -251,7 +252,7 @@ func (t *Chaincode) getAAList(stub shim.ChaincodeStubInterface, aaid string) ([]
 	if err != nil {
 		return []byte{}, fmt.Errorf(err.Error())
 	}
-	for i := 0;i< length;i++{
+	for i := 1;i<= length;i++{
 		tempre, err := stub.GetState("AA_" + strconv.Itoa(i))
 		if err != nil {
 			return []byte{}, fmt.Errorf(err.Error())

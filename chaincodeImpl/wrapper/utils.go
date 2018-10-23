@@ -133,10 +133,10 @@ func IsOwner(stub shim.ChaincodeStubInterface, args []string) (bool,error) {
 	}
 }
 
-//args: str(AA的序号) r s 参数...
+//args: AA_ID(AA_1) r s 参数...
 func IsAA(stub shim.ChaincodeStubInterface, args []string) (bool,error) {
 	//获取公钥
-	pubKey, err := stub.GetState("AA_" + args[0])
+	pubKey, err := stub.GetState(args[0])
 	if err != nil {
 		return false, fmt.Errorf("Don't have this AA ID: " + err.Error())
 	}
