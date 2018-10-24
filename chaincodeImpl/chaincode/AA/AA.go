@@ -7,21 +7,23 @@ import (
 	"github.com/thorweiyan/ABEPasswordPlatform/chaincodeImpl/wrapper"
 	"github.com/thorweiyan/MulticenterABEForFabric"
 	"strconv"
+	"encoding/json"
 )
 
 type Chaincode struct {
-	MyId string
+	MyId        string
 	Initialized bool
-	MAFF *MulticenterABEForFabric.MAFFscheme
-	AAList []string //pubkey
-	N int //所有aa的数量
-	T int //阈值
+	MAFF        *MulticenterABEForFabric.MAFFscheme
+	AAList      []string //pubkey
+	N           int      //所有aa的数量
+	T           int      //阈值
 	//ABE中间变量
 	PKi [][]byte
 	Aid [][]byte
-	//User发送属性，special aa临时储存
-	AttrSk map[]
+	//User发送属性，special aa临时储存,username--userdata
+	TempUserParams map[string]wrapper.UserData
 }
+
 
 //---------------------------  初始化阶段  ---------------------------------------
 //***************************  Communicate with SYS  ***************************
@@ -180,13 +182,23 @@ func (t *Chaincode) sendToAA(stub shim.ChaincodeStubInterface, params []string, 
 				return fmt.Errorf(response.Message)
 			}
 		}
+	}else if flag[:4] == "User"{
+		passparams, err := wrapper.SignTransaction(stub, []string{flag, params[0], params[1], string(t.Aid[0])})
+		if err != nil {
+			return fmt.Errorf(err.Error())
+		}
+		passparams = append([]string{params[2], "handleFromAA", t.MyId}, passparams...)
+		response := wrapper.Call(stub, passparams)
+		if response.Status != 200 {
+			return fmt.Errorf(response.Message)
+		}
 	}else {
 		return fmt.Errorf("Don't match all methods\n")
 	}
 	return nil
 }
 
-//args: AA_ID r s ("AASecret" "AASij")/("AAPKi" "PKi" "Aid")
+//args: AA_ID r s ("AASecret" "AASij")/("AAPKi" "PKi" "Aid")/("UserSignUp"/"UserChangePassword"/"UserGetTip" "UserName" "PartSk" "Aid")
 func (t *Chaincode) handleFromAA(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if t.Initialized {
 		return shim.Error("Already initialized")
@@ -225,6 +237,72 @@ func (t *Chaincode) handleFromAA(stub shim.ChaincodeStubInterface, args []string
 			t.Initialized = true
 		}
 		return shim.Success(nil)
+	case "UserSignUp":
+		if len(args) != 7 {
+			return shim.Error("Incorrect number of arguments. Expecting 7")
+		}
+		if temp, ok := t.TempUserParams[args[4]]; !ok {
+			return shim.Error("Don't have this user")
+		}else {
+			temp.PartSk = append(temp.PartSk, []byte(args[5]))
+			temp.Aid = append(temp.Aid, []byte(args[6]))
+			t.TempUserParams[args[4]] = temp
+			if len(temp.Aid) == t.T {
+				//sk gen
+				userSk := t.keyGen(args[4])
+				err = t.signUp(stub, temp, userSk)
+				if err != nil {
+					return shim.Error("UserSignUp: " + err.Error())
+				}
+				delete(t.TempUserParams, args[4])
+			}
+			return shim.Success(nil)
+		}
+	case "UserChangePassword":
+		if len(args) != 7 {
+			return shim.Error("Incorrect number of arguments. Expecting 7")
+		}
+		if temp, ok := t.TempUserParams[args[4]]; !ok {
+			return shim.Error("Don't have this user")
+		}else {
+			temp.PartSk = append(temp.PartSk, []byte(args[5]))
+			temp.Aid = append(temp.Aid, []byte(args[6]))
+			t.TempUserParams[args[4]] = temp
+			if len(temp.Aid) == t.T {
+				//sk gen
+				userSk := t.keyGen(args[4])
+				//修改密码
+				err = t.changePassword(stub, temp, userSk)
+				if err != nil {
+					return shim.Error("UserChangePassword: " + err.Error())
+				}
+				delete(t.TempUserParams, args[4])
+			}
+			return shim.Success(nil)
+		}
+	case "UserGetTip":
+		if len(args) != 7 {
+			return shim.Error("Incorrect number of arguments. Expecting 7")
+		}
+		if temp, ok := t.TempUserParams[args[4]]; !ok {
+			return shim.Error("Don't have this user")
+		}else {
+			temp.PartSk = append(temp.PartSk, []byte(args[5]))
+			temp.Aid = append(temp.Aid, []byte(args[6]))
+			t.TempUserParams[args[4]] = temp
+			if len(temp.Aid) == t.T {
+				//sk gen
+				userSk := t.keyGen(args[4])
+				//加密数据上链
+				message, err := t.getTip(stub, temp, userSk)
+				if err != nil {
+					return shim.Error("UserSignUp: " + err.Error())
+				}
+				delete(t.TempUserParams, args[4])
+				return shim.Success(message)
+			}
+			return shim.Success(nil)
+		}
 	default:
 		return shim.Error("Invalid invoke function name. Expecting \"AASecret\" \"AAPKi\" ")
 	}
@@ -247,93 +325,418 @@ func (t *Chaincode) aaFromSTR(stub shim.ChaincodeStubInterface) ([]string, error
 	return aaList, nil
 }
 
-func (t *Chaincode) userDataFromSTR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) userDataFromSTR(stub shim.ChaincodeStubInterface, userName string) ([]byte, error) {
+	passparams, err := wrapper.SignTransaction(stub, []string{userName})
+	if err != nil {
+		return nil, fmt.Errorf("userDataFromSTR: " + err.Error())
+	}
+	passparams = append([]string{"STRcc", "get", "UserData", t.MyId}, passparams...)
+	response := wrapper.Call(stub, passparams)
+	if response.Status != 200 {
+		return nil, fmt.Errorf("userDataFromSTR: " + response.Message)
+	}
 
+	return response.Payload, nil
 }
 
-func (t *Chaincode) userChangePasswordDataFromSTR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) userChangePasswordDataFromSTR(stub shim.ChaincodeStubInterface, userName string) ([]byte, error) {
+	passparams, err := wrapper.SignTransaction(stub, []string{userName})
+	if err != nil {
+		return nil, fmt.Errorf("userChangePasswordDataFromSTR: " + err.Error())
+	}
+	passparams = append([]string{"STRcc", "get", "ChangePasswordData", t.MyId}, passparams...)
+	response := wrapper.Call(stub, passparams)
+	if response.Status != 200 {
+		return nil, fmt.Errorf("userChangePasswordDataFromSTR: " + response.Message)
+	}
 
+	return response.Payload, nil
 }
 
-func (t *Chaincode) userTipFromSTR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) userTipFromSTR(stub shim.ChaincodeStubInterface, userName string) ([]byte, error) {
+	passparams, err := wrapper.SignTransaction(stub, []string{userName})
+	if err != nil {
+		return nil, fmt.Errorf("userTipFromSTR: " + err.Error())
+	}
+	passparams = append([]string{"STRcc", "get", "UserTip",t.MyId}, passparams...)
+	response := wrapper.Call(stub, passparams)
+	if response.Status != 200 {
+		return nil, fmt.Errorf("userTipFromSTR: " + response.Message)
+	}
 
+	return response.Payload, nil
 }
 
-func (t *Chaincode) getFromSTR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-
+func (t *Chaincode) attrFromSTR(stub shim.ChaincodeStubInterface) error {
+	passparams, err := wrapper.SignTransaction(stub, []string{"ABEAttr"})
+	if err != nil {
+		return fmt.Errorf("Deserialize User's Data error: " + err.Error())
+	}
+	passparams = append([]string{"STRcc", "get", "ABEAttr",t.MyId}, passparams...)
+	response := wrapper.Call(stub, passparams)
+	if response.Status != 200 {
+		return fmt.Errorf(response.Message)
+	}
+	err = json.Unmarshal(response.Payload, t.MAFF.Omega.Rhos_map)
+	if err != nil {
+		return fmt.Errorf("Unmarshal ABE's map error: " + err.Error())
+	}
+	return nil
 }
 
 //**** put ****
-func (t *Chaincode) userDataToSTR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) userDataToSTR(stub shim.ChaincodeStubInterface, password []byte, userName string) error {
+	//加盐hash数据,存储用户账户密码
+	passwordSaltHash, err := wrapper.Pbkdf2(password)
+	if err != nil {
+		return fmt.Errorf("UserDataToSTR: " + err.Error())
+	}
+	passparams, err := wrapper.SignTransaction(stub, []string{userName, string(passwordSaltHash)})
+	if err != nil {
+		return fmt.Errorf("UserDataToSTR: " + err.Error())
+	}
+	passparams = append([]string{"STRcc", "put", "UserData", t.MyId}, passparams...)
+	response := wrapper.Call(stub, passparams)
+	if response.Status != 200 {
+		return fmt.Errorf("UserDataToSTR: " + response.Message)
+	}
 
+	return nil
 }
 
-func (t *Chaincode) userChangePasswordDataToSTR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-
+func (t *Chaincode) userChangePasswordDataToSTR(stub shim.ChaincodeStubInterface, userData wrapper.UserData, userSk []byte) error {
+	cypherText := t.encrypt(userData.UserName, userData.ChangePasswordPolicy)
+	passparams, err := wrapper.SignTransaction(stub, []string{userData.UserName, string(cypherText)})
+	if err != nil {
+		return fmt.Errorf("userChangePasswordDataToSTR: " + err.Error())
+	}
+	passparams = append([]string{"STRcc", "put", "ChangePasswordData", t.MyId}, passparams...)
+	response := wrapper.Call(stub, passparams)
+	if response.Status != 200 {
+		return fmt.Errorf("userChangePasswordDataToSTR: " + response.Message)
+	}
+	return nil
 }
 
-func (t *Chaincode) userTipToSTR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-
+func (t *Chaincode) userTipToSTR(stub shim.ChaincodeStubInterface, userData wrapper.UserData, userSk []byte) error {
+	UserTipData := t.encrypt(userData.GetTipMessage, userData.GetTipPolicy)
+	passparams, err := wrapper.SignTransaction(stub, []string{userData.UserName, string(UserTipData)})
+	if err != nil {
+		return fmt.Errorf("UserTipToSTR: " + err.Error())
+	}
+	passparams = append([]string{"STRcc", "put", "UserTip", t.MyId}, passparams...)
+	response := wrapper.Call(stub, passparams)
+	if response.Status != 200 {
+		return fmt.Errorf("UserTipToSTR: " + response.Message)
+	}
+	return nil
 }
 
-func (t *Chaincode) putToSTR(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) attrToSTR(stub shim.ChaincodeStubInterface) error {
+	attrs, err := json.Marshal(t.MAFF.Omega.Rhos_map)
+	if err != nil {
+		return fmt.Errorf("Marshal ABE's map error: " + err.Error())
+	}
 
+	passparams, err := wrapper.SignTransaction(stub, []string{string(attrs)})
+	if err != nil {
+		return fmt.Errorf("attrToSTR: " + err.Error())
+	}
+	passparams = append([]string{"STRcc", "put", "ABEAttr", t.MyId}, passparams...)
+	response := wrapper.Call(stub, passparams)
+	if response.Status != 200 {
+		return fmt.Errorf(response.Message)
+	}
+	return nil
 }
 
-
+//---------------------------  初始化之后     ---------------------------
 //***************************  User method  ***************************
-func (t *Chaincode) userSignUp(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+//args: method r s serializedData
+func (t *Chaincode) userMethod(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 4 {
+		return shim.Error("Incorrect number of arguments. Expecting 4")
+	}
+	if t.Initialized {
+		return shim.Error("Already initialized")
+	}
+	rightOwner, err := wrapper.IsOwner(stub, args[1:])
+	if !rightOwner {
+		return shim.Error(err.Error())
+	}
 
+	switch args[0] {
+	case "userSignUp":
+		return t.userSignUp(stub, args[3:])
+	case "userSignUpSpecial":
+		return t.userSignUpSpecial(stub, args[3:])
+	case "userChangePassword":
+		return t.userChangePassword(stub, args[3:])
+	case "userChangePasswordSpecial":
+		return t.userOthersSpecial(stub, args[3:])
+	case "userGetTip":
+		return t.userGetTip(stub, args[3:])
+	case "userGetTipSpecial":
+		return t.userOthersSpecial(stub, args[3:])
+	default:
+		return shim.Error("Invalid invoke function name. Expecting \"userSignUp\" \"userSignUpSpecial\" \"userChangePassword\" " +
+			"\"userChangePasswordSpecial\" \"userGetTip\" \"userGetTipSpecial\" ")
+	}
+}
+
+//args: r s serializedData
+func (t *Chaincode) userSignUp(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	tempUserParams, err := wrapper.DeserializeUserData([]byte(args[0]))
+	if err != nil {
+		return shim.Error("Deserialize User's Data error: " + err.Error())
+	}
+
+	if tempUserParams.SpecialAAId == "" || tempUserParams.Aid != nil || tempUserParams.PartSk != nil || tempUserParams.UserName == "" || len(tempUserParams.UserAttributes) != 6{
+		return shim.Error("Passing params something wrong")
+	}
+
+	//生成对应user's sk并发给special AA
+	//先从STR处取得现在的ATTR
+	err = t.attrFromSTR(stub)
+	if err != nil {
+		return shim.Error("userSignUp error: " + err.Error())
+	}
+	partSk, err := t.partUserSkGen(tempUserParams.UserAttributes)
+	if err != nil {
+		return shim.Error("Generate Part of User's sk error: " + err.Error())
+	}
+
+	passparams, err := wrapper.SignTransaction(stub, []string{string(partSk)})
+	if err != nil {
+		return shim.Error("userSignUp: " + err.Error())
+	}
+	passparams = append([]string{tempUserParams.SpecialAAId+"cc", "userMethod", "UserSignUp", t.MyId}, passparams...)
+	response := wrapper.Call(stub, passparams)
+	return response
 }
 
 func (t *Chaincode) userChangePassword(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	tempUserParams, err := wrapper.DeserializeUserData([]byte(args[0]))
+	if err != nil {
+		return shim.Error("Deserialize User's Data error: " + err.Error())
+	}
 
+	if tempUserParams.SpecialAAId == "" || tempUserParams.Aid != nil || tempUserParams.PartSk != nil || tempUserParams.UserName == "" || len(tempUserParams.UserAttributes) == 0 {
+		return shim.Error("Passing params something wrong")
+	}
+
+	//生成对应user's sk并发给special AA
+	//先从STR处取得现在的ATTR
+	err = t.attrFromSTR(stub)
+	if err != nil {
+		return shim.Error("userChangePassword error: " + err.Error())
+	}
+	partSk, err := t.partUserSkGen(tempUserParams.UserAttributes)
+	if err != nil {
+		return shim.Error("Generate Part of User's sk error: " + err.Error())
+	}
+
+	passparams, err := wrapper.SignTransaction(stub, []string{string(partSk)})
+	if err != nil {
+		return shim.Error("userChangePassword: " + err.Error())
+	}
+	passparams = append([]string{tempUserParams.SpecialAAId+"cc", "userMethod", "UserChangePassword", t.MyId}, passparams...)
+	response := wrapper.Call(stub, passparams)
+	return response
 }
 
 func (t *Chaincode) userGetTip(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	tempUserParams, err := wrapper.DeserializeUserData([]byte(args[0]))
+	if err != nil {
+		return shim.Error("Deserialize User's Data error: " + err.Error())
+	}
 
+	if tempUserParams.SpecialAAId == "" || tempUserParams.Aid != nil || tempUserParams.PartSk != nil || tempUserParams.UserName == "" || len(tempUserParams.UserAttributes) == 0 {
+		return shim.Error("Passing params something wrong")
+	}
+
+	//生成对应user's sk并发给special AA
+	//先从STR处取得现在的ATTR
+	err = t.attrFromSTR(stub)
+	if err != nil {
+		return shim.Error("userGetTip error: " + err.Error())
+	}
+	partSk, err := t.partUserSkGen(tempUserParams.UserAttributes)
+	if err != nil {
+		return shim.Error("Generate Part of User's sk error: " + err.Error())
+	}
+
+	passparams, err := wrapper.SignTransaction(stub, []string{string(partSk)})
+	if err != nil {
+		return shim.Error("userGetTip: " + err.Error())
+	}
+	passparams = append([]string{tempUserParams.SpecialAAId+"cc", "userMethod", "UserGetTip", t.MyId}, passparams...)
+	response := wrapper.Call(stub, passparams)
+	return response
 }
 
 //special aa method
 func (t *Chaincode) userSignUpSpecial(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	tempUserParams, err := wrapper.DeserializeUserData([]byte(args[0]))
+	if err != nil {
+		return shim.Error("Deserialize User's Data error: " + err.Error())
+	}
 
+	if tempUserParams.SpecialAAId == "" || tempUserParams.Aid != nil || tempUserParams.PartSk != nil || tempUserParams.UserName == "" || len(tempUserParams.UserAttributes) != 6{
+		return shim.Error("Passing params something wrong")
+	}
+
+	//生成对应user's sk
+	//先从STR处取得现在的ATTR
+	err = t.attrFromSTR(stub)
+	if err != nil {
+		return shim.Error("userSignUpSpecial error: " + err.Error())
+	}
+	//判断用户名是否已经存在
+	if _,ok := t.MAFF.Omega.Rhos_map[tempUserParams.UserName]; ok {
+		return shim.Error("UserName already exists")
+	}
+	//加上新的ATTR，并存储**************************其他没有这两步
+	t.MAFF.AddAttr(tempUserParams.UserAttributes)
+	err = t.attrToSTR(stub)
+	if err != nil {
+		return shim.Error("userSignUpSpecial error: " + err.Error())
+	}
+
+	partSk, err := t.partUserSkGen(tempUserParams.UserAttributes)
+	if err != nil {
+		return shim.Error("Generate Part of User's sk error: " + err.Error())
+	}
+
+	tempUserParams.PartSk = append(tempUserParams.PartSk, partSk)
+	tempUserParams.Aid = append(tempUserParams.Aid, t.Aid[0])
+	t.TempUserParams[tempUserParams.UserName] = *tempUserParams
+	return shim.Success(nil)
 }
 
-func (t *Chaincode) userChangePasswordSpecial(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+//changePassword and getTip
+func (t *Chaincode) userOthersSpecial(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	tempUserParams, err := wrapper.DeserializeUserData([]byte(args[0]))
+	if err != nil {
+		return shim.Error("Deserialize User's Data error: " + err.Error())
+	}
 
+	if tempUserParams.SpecialAAId == "" || tempUserParams.Aid != nil || tempUserParams.PartSk != nil || tempUserParams.UserName == "" || len(tempUserParams.UserAttributes) == 0 {
+		return shim.Error("Passing params something wrong")
+	}
+
+	//生成对应user's sk
+	//先从STR处取得现在的ATTR
+	err = t.attrFromSTR(stub)
+	if err != nil {
+		return shim.Error("userOthersSpecial error: " + err.Error())
+	}
+	partSk, err := t.partUserSkGen(tempUserParams.UserAttributes)
+	if err != nil {
+		return shim.Error("Generate Part of User's sk error: " + err.Error())
+	}
+	tempUserParams.PartSk = append(tempUserParams.PartSk, partSk)
+	tempUserParams.Aid = append(tempUserParams.Aid, t.Aid[0])
+	t.TempUserParams[tempUserParams.UserName] = *tempUserParams
+	return shim.Success(nil)
 }
 
-func (t *Chaincode) userGetTipSpecial(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) signUp(stub shim.ChaincodeStubInterface, userData wrapper.UserData, userSk []byte) error {
+	//账户密码数据上链
+	err := t.userDataToSTR(stub, userData.UserPasswordHash, userData.UserName)
+	if err != nil {
+		return fmt.Errorf("signUp: " + err.Error())
+	}
 
+	//修改密码凭证上链
+	err = t.userChangePasswordDataToSTR(stub, userData, userSk)
+	if err != nil {
+		return fmt.Errorf("signUp: " + err.Error())
+	}
+
+	//存储用户提示信息如果有的话,没有直接返回
+	if userData.GetTipMessage == "" || userData.GetTipPolicy == "" {
+		return nil
+	}
+	err = t.userTipToSTR(stub, userData, userSk)
+	if err != nil {
+		return fmt.Errorf("signUp: " + err.Error())
+	}
+	return nil
+}
+
+func (t *Chaincode) changePassword(stub shim.ChaincodeStubInterface, userData wrapper.UserData, userSk []byte) error {
+	//检测属性是否能够解密，先获取密文
+	cyperText, err := t.userChangePasswordDataFromSTR(stub, userData.UserName)
+	if err != nil {
+		return fmt.Errorf("changePassword: " + err.Error())
+	}
+	message,err := t.decrypt(userSk, cyperText)
+	if err != nil {
+		return fmt.Errorf("changePassword: " + err.Error())
+	}
+
+	if string(message) == userData.UserName {
+		err = t.userDataToSTR(stub, userData.UserPasswordHash, userData.UserName)
+		if err != nil {
+			return fmt.Errorf("changePassword: " + err.Error())
+		}
+		return nil
+	}
+	return fmt.Errorf("Policy not matched!\n")
+}
+
+func (t *Chaincode) getTip(stub shim.ChaincodeStubInterface, userData wrapper.UserData, userSk []byte) ([]byte, error) {
+	//检测属性是否能够解密，先获取密文
+	cyperText, err := t.userTipFromSTR(stub, userData.UserName)
+	if err != nil {
+		return nil, fmt.Errorf("getTip: " + err.Error())
+	}
+	message, err := t.decrypt(userSk, cyperText)
+	if err != nil {
+		return nil, fmt.Errorf("changePassword: " + err.Error())
+	}
+	return message, nil
 }
 
 //***************************  Third party method  ***************************
+//args: r s userName PasswordHash
 func (t *Chaincode) thirdVerify(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-
+	if len(args) !=4 {
+		return shim.Error("Incorrect number of arguments. Expecting 4")
+	}
+	rightOwner, err := wrapper.IsOwner(stub, args)
+	if !rightOwner {
+		return shim.Error(err.Error())
+	}
+	//获取用户密钥hash
+	hash, err := t.userDataFromSTR(stub, args[2])
+	if err != nil {
+		return shim.Error("thirdVerify:" + err.Error())
+	}
+	if string(hash) != args[3] {
+		return shim.Error("Password unmatched!")
+	}
+	return shim.Success(nil)
 }
 
 
 //***************************  ABE usage  ***************************
-func (t *Chaincode) keyGen(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-
+func (t *Chaincode) partUserSkGen(attrs []string) ([]byte, error) {
+	return t.MAFF.SKGEN_AA(attrs)
 }
 
-func (t *Chaincode) encrypt(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-
+func (t *Chaincode) keyGen(userName string) []byte {
+	return t.MAFF.SKGEN_USER(t.TempUserParams[userName].PartSk, t.TempUserParams[userName].Aid)
 }
 
-func (t *Chaincode) decrypt(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-
+func (t *Chaincode) encrypt(message string, policy string) []byte {
+	return t.MAFF.ENCRYPT([]byte(message), policy)
 }
 
-
-
-
-
-
-
-
-
+func (t *Chaincode) decrypt(secretKey []byte, cryptText []byte) ([]byte, error) {
+	return t.MAFF.DECRYPT(secretKey, cryptText)
+}
 
 
 //***************************  Chaincode interface  ***************************
@@ -356,24 +759,13 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.startABECommunicate(stub, args)
 	case "handleFromAA":
 		return t.handleFromAA(stub, args)
-	case "userSignUp":
-		return t.userSignUp(stub, args)
-	case "userSignUpSpecial":
-		return t.userSignUpSpecial(stub, args)
-	case "userChangePassword":
-		return t.userChangePassword(stub, args)
-	case "userChangePasswordSpecial":
-		return t.userChangePasswordSpecial(stub, args)
-	case "userGetTip":
-		return t.userGetTip(stub, args)
-	case "userGetTipSpecial":
-		return t.userGetTipSpecial(stub, args)
+	case "userMethod":
+		return t.userMethod(stub, args)
 	case "thirdVerify":
 		return t.thirdVerify(stub, args)
 	default:
 		return shim.Error("Invalid invoke function name. Expecting \"getPubKey\" \"registerToSYS\" \"receiveMPK\" " +
-			"\"startABECommunicate\" \"handleFromAA\" \"userSignUp\" \"userSignUpSpecial\" \"userChangePassword\" " +
-				"\"userChangePasswordSpecial\" \"userGetTip\" \"userGetTipSpecial\" \"thirdVerify\"")
+			"\"startABECommunicate\" \"handleFromAA\" \"userMethod\" \"thirdVerify\"")
 	}
 }
 

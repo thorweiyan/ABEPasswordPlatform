@@ -10,7 +10,56 @@ import (
 	pb "github.com/hyperledger/fabric/protos/peer"
 	"math/big"
 	"crypto/x509"
+	"encoding/gob"
+	"bytes"
+	"io"
+	"crypto/sha256"
+	"golang.org/x/crypto/pbkdf2"
 )
+
+
+type UserData struct {
+	UserName             string		//"UN:xxxxxx"
+	UserPasswordHash     []byte		//"xxxxxxxxx"
+	ChangePasswordPolicy string		//"CPP:xxxxx"
+	GetTipPolicy         string		//"GTP:xxxxx"
+	GetTipMessage        string		//"GTM:xxxxx"
+	UserAttributes       []string	//"xxxxxxxxx"
+	SpecialAAId			 string		//"AA_1"
+	PartSk               [][]byte   //nil
+	Aid                  [][]byte	//nil
+}
+
+func (u *UserData) Serialize() ([]byte, error) {
+	var result bytes.Buffer
+	encoder := gob.NewEncoder(&result)
+	err := encoder.Encode(u)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return result.Bytes(), nil
+}
+
+func DeserializeUserData(d []byte) (*UserData, error) {
+	ud := new(UserData)
+
+	decoder := gob.NewDecoder(bytes.NewReader(d))
+	err := decoder.Decode(&ud)
+	if err != nil {
+		return nil, err
+	}
+	return ud, nil
+}
+
+func Pbkdf2(password []byte) ([]byte, error) {
+	salt := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
+		return nil, fmt.Errorf("rand salt error:" + err.Error())
+	}
+
+	return pbkdf2.Key(password, salt, 4096, 32, sha256.New), nil
+}
 
 func EcdsaSetUp() (*ecdsa.PrivateKey, *ecdsa.PublicKey, error){
 	prk, err := ecdsa.GenerateKey(elliptic.P224(), rand.Reader)

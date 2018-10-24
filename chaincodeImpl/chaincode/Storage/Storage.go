@@ -65,7 +65,7 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 }
 
 //***************************  second level method  ***************************
-//args: put (aa_id) r s arg/s
+//args: type (aa_id) r s args...
 func (t *Chaincode) put(stub shim.ChaincodeStubInterface, args []string) pb.Response{
 	switch args[0] {
 	//存放AA的列表
@@ -73,22 +73,27 @@ func (t *Chaincode) put(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 		return t.putAAList(stub, args[1:])
 		//存放用户账户密码
 	case "UserData":
-		if len(args) != 3 {
-			return shim.Error("Incorrect number of arguments. Expecting 3")
+		if len(args) != 6 {
+			return shim.Error("Incorrect number of arguments. Expecting 6")
 		}
 		return t.putUserData(stub, args[1:])
 		//存放改密信息
 	case "ChangePasswordData":
-		if len(args) != 3 {
-			return shim.Error("Incorrect number of arguments. Expecting 3")
+		if len(args) != 6 {
+			return shim.Error("Incorrect number of arguments. Expecting 6")
 		}
 		return t.putChangePasswordData(stub, args[1:])
 		//存放用户自设提示信息
 	case "UserTip":
-		if len(args) != 3 {
-			return shim.Error("Incorrect number of arguments. Expecting 3")
+		if len(args) != 6 {
+			return shim.Error("Incorrect number of arguments. Expecting 6")
 		}
 		return t.putUserTip(stub, args[1:])
+	case "ABEAttr":
+		if len(args) != 5 {
+			return shim.Error("Incorrect number of arguments. Expecting 5")
+		}
+		return t.putABEAttr(stub, args[1:])
 	default:
 		return shim.Error("Can't match any one")
 	}
@@ -132,6 +137,12 @@ func (t *Chaincode) get(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 		return shim.Success(result)
 	case "UserTip":
 		result, err := stub.GetState("UserTip_" + args[4])
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(result)
+	case "ABEAttr": //args[4]="ABEAttr"
+		result, err := stub.GetState(args[4])
 		if err != nil {
 			return shim.Error(err.Error())
 		}
@@ -191,7 +202,7 @@ func (t *Chaincode) putUserData(stub shim.ChaincodeStubInterface, args []string)
 	//去掉rs
 	args = args[3:]
 	//直接覆盖用户数据
-	err = stub.PutState("UserData_"+args[1], []byte(args[2]))
+	err = stub.PutState("UserData_"+args[0], []byte(args[1]))
 	if err != nil {
 		return shim.Error("Putting UserData: " + err.Error())
 	}
@@ -212,7 +223,7 @@ func (t *Chaincode) putChangePasswordData(stub shim.ChaincodeStubInterface, args
 	//去掉rs
 	args = args[3:]
 	//直接覆盖用户数据
-	err = stub.PutState("ChangePasswordData_"+args[1], []byte(args[2]))
+	err = stub.PutState("ChangePasswordData_"+args[0], []byte(args[1]))
 	if err != nil {
 		return shim.Error("Putting ChangePasswordData: " + err.Error())
 	}
@@ -233,9 +244,30 @@ func (t *Chaincode) putUserTip(stub shim.ChaincodeStubInterface, args []string) 
 	//去掉rs
 	args = args[3:]
 	//直接覆盖用户数据
-	err = stub.PutState("UserTip_"+args[1], []byte(args[2]))
+	err = stub.PutState("UserTip_"+args[0], []byte(args[1]))
 	if err != nil {
 		return shim.Error("Putting UserTip: " + err.Error())
+	}
+	return shim.Success(nil)
+}
+
+func (t *Chaincode) putABEAttr(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	//AA初始化
+	isInit, err := t.isAAInitialized(stub)
+	if !isInit {
+		return shim.Error(err.Error())
+	}
+	//是不是AA调用的
+	rightCreator, err := wrapper.IsAA(stub, args)
+	if (err != nil) || !rightCreator {
+		return shim.Error("Putting UserTip: " + err.Error())
+	}
+	//去掉rs
+	args = args[3:]
+
+	err = stub.PutState("ABEAttr", []byte(args[0]))
+	if err != nil {
+		return shim.Error("Putting ABEAttr: " + err.Error())
 	}
 	return shim.Success(nil)
 }
