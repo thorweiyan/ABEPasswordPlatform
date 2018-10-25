@@ -1,7 +1,7 @@
 package routers
 
 import (
-	"github.com/zrynuaa/ABEPasswordPlatform/controllers"
+	"github.com/thorweiyan/ABEPasswordPlatform/controllers"
 	"github.com/astaxie/beego"
 )
 
