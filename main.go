@@ -1,7 +1,7 @@
 package main
 
 import (
-	_ "github.com/zrynuaa/ABEPasswordPlatform/routers"
+	_ "github.com/thorweiyan/ABEPasswordPlatform/routers"
 	"github.com/astaxie/beego"
 )
 
