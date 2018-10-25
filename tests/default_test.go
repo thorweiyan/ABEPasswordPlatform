@@ -6,7 +6,7 @@ import (
 	"testing"
 	"runtime"
 	"path/filepath"
-	_ "github.com/zrynuaa/ABEPasswordPlatform/routers"
+	_ "github.com/thorweiyan/ABEPasswordPlatform/routers"
 
 	"github.com/astaxie/beego"
 	. "github.com/smartystreets/goconvey/convey"
