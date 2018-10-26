@@ -8,7 +8,7 @@ import (
 func init() {
     beego.Router("/", &controllers.MainController{})
 
-	beego.Router("/", &controllers.SignUpController{})
-	beego.Router("ChangePassword", &controllers.SignUpController{})
-	beego.Router("GetTip", &controllers.GetTipController{})
+	beego.Router("/signup", &controllers.SignUpController{})
+	beego.Router("changepassword", &controllers.SignUpController{})
+	beego.Router("gettip", &controllers.GetTipController{})
 }

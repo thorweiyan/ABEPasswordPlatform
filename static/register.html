@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:v-on="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://cdn.staticfile.org/vue/2.4.2/vue.min.js"></script>
+</head>
+<body>
+    <p>register test~!</p>
+    <form id="user" action="/" method="post" >
+        名字：<input name="username" type="text" />
+        年龄：<input name="age" type="text" />
+        邮箱：<input name="Email" type="text" />
+        <input type="submit" value="提交" />
+    </form>
+
+    <div id="vue_det">
+        <h1>site : {{site}}</h1>
+        <h1>url : {{url}}</h1>
+        <h1>{{details()}}</h1>
+        <h1>{{click()}}</h1>
+        <button v-on:click="dosomething()">按钮</button>
+        <button @click="post()">post</button>
+    </div>
+
+    <script type="text/javascript">
+        var vm = new Vue({
+            el: '#vue_det',
+            data: {
+                site: "fudanabe111",
+                url: "hhhhhhh",
+                alexa: "10"
+            },
+            methods:{
+                details: function() {
+                    return this.site + "hello.";
+                },
+                click: function () {
+                    return "ceshi ,,,,,";
+                },
+                dosomething: function () {
+                    this.site = "jsdcgsucxbsyge"
+                },
+                post:function() {
+                    //发送 post 请求
+
+                    var postData = {
+                        "username":this.site
+
+                    }
+                    console.log(postData);
+
+                    $.ajax({
+                        type: 'POST',
+                        url: "http://localhost：8080/signup",
+                        data: JSON.stringify(postData),
+                        success: function(result){
+                            console.log(result);
+                            _this.busy = false
+                            alert("success")
+                            location.reload()
+                            //code:: notice hospital the result.
+                        },
+                        dataType: "json"
+                    });
+                }
+            }
+        })
+    </script>
+</body>
+</html>
