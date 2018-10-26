@@ -4,9 +4,8 @@ import (
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"fmt"
 	pb "github.com/hyperledger/fabric/protos/peer"
-	"github.com/thorweiyan/MulticenterABEForFabric"
-	"github.com/thorweiyan/ABEPasswordPlatform/chaincodeImpl/wrapper"
 	"strconv"
+	"github.com/thorweiyan/ABEPasswordPlatform/chaincodeImpl/wrapper"
 )
 
 type Chaincode struct {
@@ -21,11 +20,10 @@ type Chaincode struct {
 
 //***************************  ABE Init  ***************************
 func (t *Chaincode) abeInit(stub shim.ChaincodeStubInterface) error{
-	sysAbe := new(MulticenterABEForFabric.MAFFscheme)
-	sysAbe.SYSInit(t.T, t.N)
-	err := stub.PutState("PubKeyParams", sysAbe.PublicKey.Serialize())
+	pubKey := wrapper.SYSInit(t.T, t.N)
+	err := stub.PutState("PubKeyParams", pubKey)
 	if err != nil {
-		return fmt.Errorf("Put MPK of ABE wrong!\n")
+		return fmt.Errorf("abeInit:Put MPK of ABE wrong!\n")
 	}
 	return nil
 }
@@ -36,14 +34,14 @@ func (t *Chaincode) aaListToSTR(stub shim.ChaincodeStubInterface) error {
 
 	passParams, err := wrapper.SignTransaction(stub, t.AAList)
 	if err != nil {
-		return fmt.Errorf(err.Error())
+		return fmt.Errorf("aaListToSTR"+err.Error())
 	}
 	passParams = append([]string{"STRcc", "put", "AAList"}, passParams...)
 	response := wrapper.Call(stub, passParams)
 	if response.Status == 200 {
 		return nil
 	}else {
-		return fmt.Errorf(response.Message)
+		return fmt.Errorf("aaListToSTR"+response.Message)
 	}
 }
 
@@ -67,12 +65,12 @@ func (t *Chaincode) startAAsABECommunicate(stub shim.ChaincodeStubInterface) err
 func (t *Chaincode) sendParamsToAA(stub shim.ChaincodeStubInterface, aaCCName string) error {
 	abeMPK, err := stub.GetState("PubKeyParams")
 	if err != nil {
-		return fmt.Errorf("Get ABE's MPK error: " + err.Error())
+		return fmt.Errorf("sendParamsToAA:Get ABE's MPK error: " + err.Error())
 	}
 
 	args, err := wrapper.SignTransaction(stub, []string{string(abeMPK)})
 	if err != nil {
-		return fmt.Errorf("Sign ABE's MPK error: " + err.Error())
+		return fmt.Errorf("sendParamsToAA:Sign ABE's MPK error: " + err.Error())
 	}
 
 	args = append([]string{aaCCName, "receiveMPK"}, args...)
@@ -86,7 +84,7 @@ func (t *Chaincode) sendParamsToAA(stub shim.ChaincodeStubInterface, aaCCName st
 //args: AA_ID(AA_1、AA_2...)
 func (t *Chaincode) receiveRegisterFromAA(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if t.Initialized {
-		return shim.Error("Already Initialized")
+		return shim.Error("receiveRegisterFromAA:Already Initialized")
 	}
 	//获取AA的公钥,并检测其cc是否上线
 	response := wrapper.Call(stub, []string{args[0]+"cc", "getPubKey"})
@@ -95,14 +93,14 @@ func (t *Chaincode) receiveRegisterFromAA(stub shim.ChaincodeStubInterface, args
 		//去掉AA_
 		id,err := strconv.Atoi(args[0][3:])
 		if err != nil {
-			return shim.Error("AA_ID's type error")
+			return shim.Error("receiveRegisterFromAA:AA_ID's type error")
 		}
 		t.AAList[id] = args[0]
 
 		//send MPK to AA
 		err = t.sendParamsToAA(stub, args[0]+"cc")
 		if err != nil {
-			return shim.Error(err.Error())
+			return shim.Error("receiveRegisterFromAA"+err.Error())
 		}
 
 		if t.Length == t.N {
@@ -111,13 +109,13 @@ func (t *Chaincode) receiveRegisterFromAA(stub shim.ChaincodeStubInterface, args
 			// storage aalist
 			err := t.aaListToSTR(stub)
 			if err != nil {
-				return shim.Error(err.Error())
+				return shim.Error("receiveRegisterFromAA"+err.Error())
 			}
 
 			// tell aa to communicate
 			err = t.startAAsABECommunicate(stub)
 			if err != nil {
-				return shim.Error(err.Error())
+				return shim.Error("receiveRegisterFromAA"+err.Error())
 			}
 
 			// done
@@ -139,7 +137,7 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	}else if function == "getPubKey" {
 		PubKey, err := stub.GetState("PubKey")
 		if err!= nil {
-			return shim.Error("GetState PubKey error\n")
+			return shim.Error("Invoke:GetState PubKey error\n")
 		}
 		return shim.Success(PubKey)
 	}
@@ -159,11 +157,11 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	t.Length = 0
 	t.T, err = strconv.Atoi(args[0])
 	if err!= nil {
-		return shim.Error("t is not a string(int)\n")
+		return shim.Error("Init:t is not a string(int)\n")
 	}
 	t.N, err = strconv.Atoi(args[1])
 	if err!= nil {
-		return shim.Error("n is not a string(int)\n")
+		return shim.Error("Init:n is not a string(int)\n")
 	}
 	t.Initialized = false
 
@@ -172,16 +170,16 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	//chaincode's pair of keys
 	CCPrikey, CCPubkey, err := wrapper.EcdsaSetUpNormal()
 	if err!= nil {
-		return shim.Error("t is not a string(int)\n")
+		return shim.Error("Init::" + err.Error())
 	}
 
 	err = stub.PutState("PriKey", CCPrikey)
 	if err!= nil {
-		return shim.Error("PutState Prikey error\n")
+		return shim.Error("Init:PutState Prikey error\n")
 	}
 	err = stub.PutState("PubKey", CCPubkey)
 	if err!= nil {
-		return shim.Error("PutState Pubkey error\n")
+		return shim.Error("Init:PutState Pubkey error\n")
 	}
 
 	return shim.Success(nil)
