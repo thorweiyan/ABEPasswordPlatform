@@ -5,7 +5,7 @@ import (
 	"net/rpc"
 )
 
-const RPCADDRESS = "localhost:9999"
+var RPCADDRESS string = "localhost:9999"
 
 func dial() *rpc.Client {
 	client, err := rpc.DialHTTP("tcp", RPCADDRESS)
@@ -32,11 +32,17 @@ func SYSInit(t, n int) []byte {
 	return reply
 }
 
-func AASetup1(aapubkey []byte)(int,int) {
+type Setup1 struct {
+	Pubkey []byte
+	AAaid []byte
+}
+
+func AASetup1(pubkey, aapubkey []byte)(int,int) {
 	client := dial()
 
 	var reply Sysinit
-	err := client.Call("MAFF.AASetup1", aapubkey, &reply)
+	setup1 := Setup1{Pubkey:pubkey,AAaid:aapubkey}
+	err := client.Call("MAFF.AASetup1", setup1, &reply)
 	if err != nil {
 		log.Fatal("MAFF error:", err)
 	}
@@ -97,23 +103,28 @@ func AASetup3(pki,aid [][]byte) {
 	}
 }
 
+type Mmap struct {
+	Map []byte
+	NowLen int
+}
 
-func MarshalMap() ([]byte,error) {
+func MarshalMap() ([]byte,int,error) {
 	client := dial()
 
-	var reply []byte
+	var reply *Mmap
 	err := client.Call("MAFF.MarshalMap", "", &reply)
 	if err != nil {
 		log.Fatal("MAFF error:", err)
 	}
-	return reply, err
+	return reply.Map, reply.NowLen, err
 }
 
-func UnMarshalMap(attrs []byte) (error) {
+func UnMarshalMap(attrs []byte, nowlen int) (error) {
 	client := dial()
 
 	var reply []byte
-	err := client.Call("MAFF.UnMarshalMap", attrs, &reply)
+	args := Mmap{Map:attrs, NowLen:nowlen}
+	err := client.Call("MAFF.UnMarshalMap", args, &reply)
 	if err != nil {
 		log.Fatal("MAFF error:", err)
 	}
