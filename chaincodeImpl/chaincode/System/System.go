@@ -149,8 +149,12 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Println("System Init")
 	_, args := stub.GetFunctionAndParameters()
 
-	if len(args) != 0 {
-		return shim.Error("Incorrect number of arguments. Expecting 0")
+	if len(args) != 2 {
+		re := ""
+		for _,v := range args{
+			re+=v
+		}
+		return shim.Error(re+ "Incorrect number of arguments. Expecting 2")
 	}
 
 	var err error

@@ -15,14 +15,14 @@ func dial() *rpc.Client {
 	return client
 }
 
-type sysinit struct {
-	t, n int
+type Sysinit struct {
+	T, N int
 }
 //Client functions
 func SYSInit(t, n int) []byte {
 	client := dial()
 
-	args := &sysinit{t:t,n:n}
+	args := &Sysinit{T:t, N:n}
 	var reply []byte
 	err := client.Call("MAFF.SYSInit", args, &reply)
 	if err != nil {
@@ -35,13 +35,13 @@ func SYSInit(t, n int) []byte {
 func AASetup1(aapubkey []byte)(int,int) {
 	client := dial()
 
-	var reply sysinit
+	var reply Sysinit
 	err := client.Call("MAFF.AASetup1", aapubkey, &reply)
 	if err != nil {
 		log.Fatal("MAFF error:", err)
 	}
 
-	return reply.t,reply.n
+	return reply.T,reply.N
 }
 
 func AACommunicate(aaList []string) []string{
@@ -68,28 +68,28 @@ func AppendSij(sij string) bool{
 	return reply
 }
 
-type setup2 struct {
-	pki, aid []byte
+type Setup2 struct {
+	Pki, Aid []byte
 }
 func AASetup2()([]byte,[]byte) {
 	client := dial()
 
-	var reply setup2
+	var reply Setup2
 	err := client.Call("MAFF.AASetup2", "", &reply)
 	if err != nil {
 		log.Fatal("MAFF error:", err)
 	}
 
-	return reply.pki, reply.aid
+	return reply.Pki, reply.Aid
 }
 
-type setup3 struct {
-	pki,aid [][]byte
+type Setup3 struct {
+	Pki, Aid [][]byte
 }
 func AASetup3(pki,aid [][]byte) {
 	client := dial()
 
-	args := setup3{pki:pki, aid:aid}
+	args := Setup3{Pki:pki, Aid:aid}
 	var reply []byte
 	err := client.Call("MAFF.AASetup3", args, &reply)
 	if err != nil {
@@ -153,13 +153,13 @@ func PartUserSkGen(attrs []string) ([]byte, error) {
 	return reply,err
 }
 
-type keygen struct {
-	partSk, aid [][]byte
+type Keygen struct {
+	PartSk, Aid [][]byte
 }
 func KeyGen(partSk [][]byte, aid [][]byte) []byte {
 	client := dial()
 
-	args := keygen{partSk:partSk, aid:aid}
+	args := Keygen{PartSk:partSk, Aid:aid}
 	var reply []byte
 	err := client.Call("MAFF.KeyGen", args, &reply)
 	if err != nil {
@@ -168,13 +168,13 @@ func KeyGen(partSk [][]byte, aid [][]byte) []byte {
 	return reply
 }
 
-type encrypt struct {
-	message, policy string
+type ENcrypt struct {
+	Message, Policy string
 }
 func Encrypt(message string, policy string) []byte {
 	client := dial()
 
-	args := encrypt{message:message, policy:policy}
+	args := ENcrypt{Message:message, Policy:policy}
 	var reply []byte
 	err := client.Call("MAFF.Encrypt", args, &reply)
 	if err != nil {
@@ -183,13 +183,13 @@ func Encrypt(message string, policy string) []byte {
 	return reply
 }
 
-type decrypt struct {
-	secretKey, cryptText []byte
+type DEcrypt struct {
+	SecretKey, CryptText []byte
 }
 func Decrypt(secretKey []byte, cryptText []byte) ([]byte, error) {
 	client := dial()
 
-	args := decrypt{secretKey:secretKey, cryptText:cryptText}
+	args := DEcrypt{SecretKey:secretKey, CryptText:cryptText}
 	var reply []byte
 	err := client.Call("MAFF.Decrypt", args, &reply)
 	if err != nil {
