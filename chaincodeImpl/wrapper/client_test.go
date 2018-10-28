@@ -86,7 +86,8 @@ func TestKeyGen(t *testing.T) {
 
 	RPCADDRESS = "localhost:10000"
 	usersk := KeyGen([][]byte{partsk1,partsk2},[][]byte{aa1Pubkey,aa2Pubkey})
-	cy := Encrypt("this is test message", "(czn AND chou AND 19970212)")
+	cy := Encrypt("this is test message", "(czn AND shuai AND 19970212)")
+	fmt.Printf("cy:%x\n",cy)
 	me, err := Decrypt(usersk, cy)
 	fmt.Println(err)
 	fmt.Println(string(me))
@@ -98,4 +99,12 @@ func TestUnMarshalMap(t *testing.T) {
 	fmt.Println(err)
 	fmt.Printf("%x\n", attrs)
 	fmt.Println(UnMarshalMap(attrs,nowlen))
+}
+
+func TestXiufu(t *testing.T) {
+	pubkey,_ := hex.DecodeString("04ec1d9af281ec7207ff92815e3a764c4fac8b307de30c92575a742961ce30df8a2fd7886576718956bd57a697ed511e4955e8f7b14b30530e")
+	RPCADDRESS = "localhost:9999"
+	mpk := SYSInit(2,3)
+	RPCADDRESS = "localhost:10000"
+	AASetup1(mpk,pubkey)
 }

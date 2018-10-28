@@ -20,7 +20,7 @@ func (t *Chaincode) isAAInitialized(stub shim.ChaincodeStubInterface) (bool, err
 		return false, fmt.Errorf("Failed to get isInitAA state: " + err.Error())
 	}
 	if string(isInit) != "True" {
-		return false, fmt.Errorf("AA is Initialized " + err.Error())
+		return false, nil
 	}
 	return true, nil
 }
@@ -46,6 +46,7 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 		return shim.Error("Incorrect number of arguments. Expecting 0")
 	}
 
+	//初始化就存储SYS公钥
 	response := wrapper.Call(stub, []string{"SYScc", "getPubKey"})
 	if response.Status == 200 {
 		err := stub.PutState("SYSChaincode", response.Payload)
@@ -90,8 +91,8 @@ func (t *Chaincode) put(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 		}
 		return t.putUserTip(stub, args[1:])
 	case "ABEAttr":
-		if len(args) != 5 {
-			return shim.Error("Incorrect number of arguments. Expecting 5")
+		if len(args) != 6 {
+			return shim.Error("Incorrect number of arguments. Expecting 6")
 		}
 		return t.putABEAttr(stub, args[1:])
 	default:
@@ -113,7 +114,7 @@ func (t *Chaincode) get(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 	//AA初始化完了没
 	isInit, err := t.isAAInitialized(stub)
 	if !isInit {
-		return shim.Error(err.Error())
+		return shim.Error("AA isn't Initialized!")
 	}
 	switch args[0] {
 	case "AAList":
@@ -146,30 +147,38 @@ func (t *Chaincode) get(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 		if err != nil {
 			return shim.Error(err.Error())
 		}
-		return shim.Success(result)
+		result2, err := stub.GetState("NowAttr")
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(append(result,result2...))
 	default:
 		return shim.Error("Can't match any one")
 	}
 }
 
 //***************************  third level method  ***************************
-//args: r s aalist...
+//args: "SYS" r s aalist...
 func (t *Chaincode) putAAList(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	//AA初始化完了没
 	isInit, err := t.isAAInitialized(stub)
 	if isInit{
-		return shim.Error(err.Error())
+		return shim.Error("AA is Initialized!")
+	}
+	if args[0] != "SYS" {
+		return shim.Error("first param must be SYS")
 	}
 	//是不是SYS调用的
-	rightCreator, err := wrapper.IsSYS(stub, args)
+	rightCreator, err := wrapper.IsSYS(stub, args[1:])
 	if (err != nil) || !rightCreator {
 		return shim.Error("Putting AAList: " + err.Error())
 	}
-	//去掉rs
-	args = args[2:]
+	//去掉id r s
+	args = args[3:]
 	//执行存储命令
 	for i := range args {
 		err = stub.PutState("AA_"+strconv.Itoa(i+1), []byte(args[i]))
+		fmt.Printf("aalist:%x\n",args[i])
 		if err != nil {
 			return shim.Error("Putting AAList: " + err.Error())
 		}
@@ -192,7 +201,7 @@ func (t *Chaincode) putUserData(stub shim.ChaincodeStubInterface, args []string)
 	//AA初始化
 	isInit, err := t.isAAInitialized(stub)
 	if !isInit{
-		return shim.Error(err.Error())
+		return shim.Error("AA isn't Initialized!")
 	}
 	//是不是AA调用的
 	rightCreator, err := wrapper.IsAA(stub, args)
@@ -201,6 +210,7 @@ func (t *Chaincode) putUserData(stub shim.ChaincodeStubInterface, args []string)
 	}
 	//去掉rs
 	args = args[3:]
+	fmt.Printf("pw:%x\n",args[1])
 	//直接覆盖用户数据
 	err = stub.PutState("UserData_"+args[0], []byte(args[1]))
 	if err != nil {
@@ -213,7 +223,7 @@ func (t *Chaincode) putChangePasswordData(stub shim.ChaincodeStubInterface, args
 	//AA初始化
 	isInit, err := t.isAAInitialized(stub)
 	if !isInit{
-		return shim.Error(err.Error())
+		return shim.Error("AA isn't Initialized!")
 	}
 	//是不是AA调用的
 	rightCreator, err := wrapper.IsAA(stub, args)
@@ -234,7 +244,7 @@ func (t *Chaincode) putUserTip(stub shim.ChaincodeStubInterface, args []string) 
 	//AA初始化
 	isInit, err := t.isAAInitialized(stub)
 	if !isInit {
-		return shim.Error(err.Error())
+		return shim.Error("AA isn't Initialized!")
 	}
 	//是不是AA调用的
 	rightCreator, err := wrapper.IsAA(stub, args)
@@ -250,24 +260,30 @@ func (t *Chaincode) putUserTip(stub shim.ChaincodeStubInterface, args []string) 
 	}
 	return shim.Success(nil)
 }
-
+//args: AA_id r s attrs NowAttr
 func (t *Chaincode) putABEAttr(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	//AA初始化
-	isInit, err := t.isAAInitialized(stub)
-	if !isInit {
-		return shim.Error(err.Error())
-	}
 	//是不是AA调用的
-	rightCreator, err := wrapper.IsAA(stub, args)
-	if (err != nil) || !rightCreator {
-		return shim.Error("Putting UserTip: " + err.Error())
+	if args[0] != "SYS" {
+		rightCreator, err := wrapper.IsAA(stub, args)
+		if (err != nil) || !rightCreator {
+			return shim.Error("Putting UserTip: " + err.Error())
+		}
+	}else {
+		rightCreator, err := wrapper.IsSYS(stub, args[1:])
+		if (err != nil) || !rightCreator {
+			return shim.Error("Putting UserTip: " + err.Error())
+		}
 	}
 	//去掉rs
 	args = args[3:]
 
-	err = stub.PutState("ABEAttr", []byte(args[0]))
+	err := stub.PutState("ABEAttr", []byte(args[0]))
 	if err != nil {
 		return shim.Error("Putting ABEAttr: " + err.Error())
+	}
+	err = stub.PutState("NowAttr", []byte(args[1]))
+	if err != nil {
+		return shim.Error("Putting NowAttr: " + err.Error())
 	}
 	return shim.Success(nil)
 }
@@ -281,6 +297,7 @@ func (t *Chaincode) getAAList(stub shim.ChaincodeStubInterface, aaid string) ([]
 	}
 	var rs []byte
 	length, err := strconv.Atoi(string(aaListLength))
+	fmt.Println(length)
 	if err != nil {
 		return []byte{}, fmt.Errorf(err.Error())
 	}
@@ -289,12 +306,15 @@ func (t *Chaincode) getAAList(stub shim.ChaincodeStubInterface, aaid string) ([]
 		if err != nil {
 			return []byte{}, fmt.Errorf(err.Error())
 		}
-		if string(tempre) == aaid {
+		if "AA_" + strconv.Itoa(i) == aaid {
 			continue
 		}else {
 			rs = append(rs, tempre...)
 			rs = append(rs, []byte("\n\n")...)
 		}
+	}
+	for _,i :=range rs{
+		fmt.Printf("asdf:%x\n",i)
 	}
 	return rs, nil
 }

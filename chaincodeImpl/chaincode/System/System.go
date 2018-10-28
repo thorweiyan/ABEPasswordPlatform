@@ -30,101 +30,89 @@ func (t *Chaincode) abeInit(stub shim.ChaincodeStubInterface) error{
 
 
 //***************************  Communicate with STR  ***************************
-func (t *Chaincode) aaListToSTR(stub shim.ChaincodeStubInterface) error {
+func (t *Chaincode) aaListToSTR(stub shim.ChaincodeStubInterface) pb.Response {
+	//if t.Length != t.N {
+	//	return shim.Error("AA isn't all online")
+	//}
+	for i:=0;i<t.N;i++{
+		response := wrapper.Call(stub, []string{"AA_"+strconv.Itoa(i+1)+"cc","getPubKey"})
+		if response.Status != 200 {
+			return response
+		}
+		t.AAList[i] = string(response.Payload)
+	}
 
 	passParams, err := wrapper.SignTransaction(stub, t.AAList)
 	if err != nil {
-		return fmt.Errorf("aaListToSTR"+err.Error())
+		return shim.Error("aaListToSTR"+err.Error())
 	}
-	passParams = append([]string{"STRcc", "put", "AAList"}, passParams...)
+	passParams = append([]string{"STRcc", "put", "AAList", "SYS"}, passParams...)
 	response := wrapper.Call(stub, passParams)
-	if response.Status == 200 {
-		return nil
-	}else {
-		return fmt.Errorf("aaListToSTR"+response.Message)
+	if response.Status != 200 {
+		shim.Error("attrToSTR:" + response.Message)
 	}
+	//put ABEATTR
+	attrs, nowattr, err := wrapper.MarshalMap()
+	if err != nil {
+		return shim.Error("attrToSTR:" + err.Error())
+	}
+
+	passparams, err := wrapper.SignTransaction(stub, []string{string(attrs), string(strconv.Itoa(nowattr))})
+	if err != nil {
+		return shim.Error("attrToSTR: " + err.Error())
+	}
+	passparams = append([]string{"STRcc", "put", "ABEAttr", "SYS"}, passparams...)
+	response = wrapper.Call(stub, passparams)
+	if response.Status != 200 {
+		return shim.Error("attrToSTR:" + response.Message)
+	}
+	return shim.Success(nil)
 }
 
-func (t *Chaincode) startAAsABECommunicate(stub shim.ChaincodeStubInterface) error {
-	for i,aa := range t.AAList {
-		//sign aa's pubkey
-		args, err := wrapper.SignTransaction(stub, []string{aa})
-		if err != nil {
-			return err
-		}
-		payload := append([]string{"AA_"+strconv.Itoa(i)+"cc", "startABECommunicate"}, args...)
-		tempResponse := wrapper.Call(stub, payload)
-		if tempResponse.Status != 200 {
-			return fmt.Errorf("StartAAsABECommmunicate error: " + tempResponse.Message)
-		}
-	}
-	return nil
-}
+//func (t *Chaincode) startAAsABECommunicate(stub shim.ChaincodeStubInterface) error {
+//	for i,aa := range t.AAList {
+//		//sign aa's pubkey
+//		args, err := wrapper.SignTransaction(stub, []string{aa})
+//		if err != nil {
+//			return err
+//		}
+//		payload := append([]string{"AA_"+strconv.Itoa(i)+"cc", "startABECommunicate"}, args...)
+//		tempResponse := wrapper.Call(stub, payload)
+//		if tempResponse.Status != 200 {
+//			return fmt.Errorf("StartAAsABECommmunicate error: " + tempResponse.Message)
+//		}
+//	}
+//	return nil
+//}
 
 //***************************  Communicate with AA  ***************************
-func (t *Chaincode) sendParamsToAA(stub shim.ChaincodeStubInterface, aaCCName string) error {
-	abeMPK, err := stub.GetState("PubKeyParams")
-	if err != nil {
-		return fmt.Errorf("sendParamsToAA:Get ABE's MPK error: " + err.Error())
-	}
 
-	args, err := wrapper.SignTransaction(stub, []string{string(abeMPK)})
-	if err != nil {
-		return fmt.Errorf("sendParamsToAA:Sign ABE's MPK error: " + err.Error())
-	}
-
-	args = append([]string{aaCCName, "receiveMPK"}, args...)
-	response := wrapper.Call(stub, args)
-	if response.Status == 200 {
-		return nil
-	}
-	return fmt.Errorf(response.Message)
-}
-
-//args: AA_ID(AA_1、AA_2...)
+//args: AA_ID(AA_1、AA_2...) pubkey
 func (t *Chaincode) receiveRegisterFromAA(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if t.Initialized {
 		return shim.Error("receiveRegisterFromAA:Already Initialized")
 	}
-	//获取AA的公钥,并检测其cc是否上线
-	response := wrapper.Call(stub, []string{args[0]+"cc", "getPubKey"})
-	if response.Status == 200 {
-		t.Length += 1
-		//去掉AA_
-		id,err := strconv.Atoi(args[0][3:])
-		if err != nil {
-			return shim.Error("receiveRegisterFromAA:AA_ID's type error")
-		}
-		t.AAList[id] = args[0]
-
-		//send MPK to AA
-		err = t.sendParamsToAA(stub, args[0]+"cc")
-		if err != nil {
-			return shim.Error("receiveRegisterFromAA"+err.Error())
-		}
-
-		if t.Length == t.N {
-			// aa all online, start init
-
-			// storage aalist
-			err := t.aaListToSTR(stub)
-			if err != nil {
-				return shim.Error("receiveRegisterFromAA"+err.Error())
-			}
-
-			// tell aa to communicate
-			err = t.startAAsABECommunicate(stub)
-			if err != nil {
-				return shim.Error("receiveRegisterFromAA"+err.Error())
-			}
-
-			// done
-			t.Initialized = true
-		}
-		return shim.Success(nil)
+	//return MPK to AA
+	abeMPK, err := stub.GetState("PubKeyParams")
+	if err != nil {
+		return shim.Error("sendParamsToAA:Get ABE's MPK error: " + err.Error())
 	}
-	//else
-	return response
+
+	////去掉AA_,get id
+	//id, err := strconv.Atoi(args[0][3:])
+	//if err != nil {
+	//	return shim.Error("receiveRegisterFromAA:AA_ID's type error")
+	//}
+
+	//if t.AAList[id-1] != "" {
+	//	return shim.Success(abeMPK)
+	//}
+
+	//t.AAList[id-1] = args[1]
+	//t.Length ++
+
+	//返回mpk
+	return shim.Success(abeMPK)
 }
 
 
@@ -140,6 +128,8 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 			return shim.Error("Invoke:GetState PubKey error\n")
 		}
 		return shim.Success(PubKey)
+	}else if function == "putaaList" {
+		return t.aaListToSTR(stub)
 	}
 	return shim.Error("Invalid invoke function name. Expecting \"register\" \"getPubKey\"")
 }
@@ -186,6 +176,10 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 		return shim.Error("Init:PutState Pubkey error\n")
 	}
 
+	err = t.abeInit(stub)
+	if err!= nil {
+		return shim.Error("Init:abe init error:" + err.Error())
+	}
 	return shim.Success(nil)
 }
 

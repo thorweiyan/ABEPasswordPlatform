@@ -24,117 +24,128 @@ type Chaincode struct {
 
 //---------------------------  初始化阶段  ---------------------------------------
 //***************************  Communicate with SYS  ***************************
-//args: r s(for "registerToSYS")
-func (t *Chaincode) registerToSYS(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if t.Initialized {
-		return shim.Error("Already initialized")
-	}
-	if len(args) != 2 {
-		return shim.Error("Incorrect number of arguments. Expecting 2")
-	}
 
-	//is owner?
-	payload := append(args, "registerToSYS")
-	rightOwner, err := wrapper.IsOwner(stub, payload)
-	if !rightOwner {
-		return shim.Error("registerToSYS" + err.Error())
-	}
-
+func (t *Chaincode) registerToSYS(stub shim.ChaincodeStubInterface, pubkey string) pb.Response {
 	// call SYS receiveRegisterFromAA
-	return wrapper.Call(stub, []string{"SYScc", "register", t.MyId})
+	return wrapper.Call(stub, []string{"SYScc", "register", t.MyId, pubkey})
 }
 
-//args: r s AA_ID(AA_1)
-func (t *Chaincode) startABECommunicate(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *Chaincode) updateAAList(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if t.Initialized {
 		return shim.Error("Already initialized")
 	}
 	if len(args) != 3 {
 		return shim.Error("Incorrect number of arguments. Expecting 3")
 	}
-	rightSYS, err := wrapper.IsSYS(stub, args)
-	if !rightSYS {
-		return shim.Error("startABECommunicate" + err.Error())
+	rightOwner, err := wrapper.IsOwner(stub, args)
+	if !rightOwner {
+		return shim.Error("updateAAList" + err.Error())
 	}
 
 	//从STR获取AAList
 	aaList, err := t.aaFromSTR(stub)
 	if err != nil {
-		return shim.Error("startABECommunicate" + err.Error())
+		return shim.Error("updateAAList" + err.Error())
 	}
+	aaList = aaList[:len(aaList)-1]
 
 	t.AAList = aaList[:]
+	for _,i :=range t.AAList{
+		fmt.Printf("asdf:%x\n",i)
+	}
 
 	//存储其他AA pubkey
-	for i := 1; i <= len(aaList)+1; i++ {
+	for i := 1; i <= len(t.AAList)+1; i++ {
 		if "AA_"+strconv.Itoa(i) == t.MyId {
-			i++
+			continue
 		}
 		err = stub.PutState("AA_"+strconv.Itoa(i), []byte(aaList[0]))
 		if err != nil {
-			return shim.Error("startABECommunicate:Put AA error: " + err.Error())
+			return shim.Error("startABE1:Put AA error: " + err.Error())
 		}
 		aaList = aaList[1:]
+	}
+	return shim.Success(nil)
+}
+
+//args: r s "startABE1"
+func (t *Chaincode) startABE1(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if t.Initialized {
+		return shim.Error("Already initialized")
+	}
+	if len(args) != 3 {
+		return shim.Error("Incorrect number of arguments. Expecting 3")
+	}
+	rightOwner, err := wrapper.IsOwner(stub, args)
+	if !rightOwner {
+		return shim.Error("startABE1" + err.Error())
 	}
 
 	//生成其他AA所需的Sij秘密并发送
 	aaSijs := wrapper.AACommunicate(t.AAList)
 	err = t.sendToAA(stub, aaSijs, "AASecret")
 	if err != nil {
-		return shim.Error("startABECommunicate:Communicate Secret error: " + err.Error())
+		return shim.Error("startABE1:Communicate Secret error: " + err.Error())
 	}
 	return shim.Success(nil)
 }
 
-//args: r s MPK
-func (t *Chaincode) receiveMPK(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+//args: r s "startABE2"
+func (t *Chaincode) startABE2(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if t.Initialized {
-		return shim.Error("receiveMPK:Already initialized")
+		return shim.Error("Already initialized")
 	}
 	if len(args) != 3 {
-		return shim.Error("receiveMPK:Incorrect number of arguments. Expecting 3")
+		return shim.Error("Incorrect number of arguments. Expecting 3")
+	}
+	rightOwner, err := wrapper.IsOwner(stub, args)
+	if !rightOwner {
+		return shim.Error("startABE1" + err.Error())
 	}
 
-	//先获取SYS的公钥
-	response := wrapper.Call(stub, []string{"SYScc", "getPubKey"})
-	if response.Status != 200 {
-		return response
-	}
+	//AAsetup2
+	tempPki, tempAid := wrapper.AASetup2()
 
-	//存储
-	err := stub.PutState("SYSChaincode", response.Payload)
+	//发送pk,aid
+	t.PKi = append(t.PKi, tempPki)
+	t.Aid = append(t.Aid, tempAid)
+	err = t.sendToAA(stub, []string{string(tempPki)}, "AAPKi")
 	if err != nil {
-		return shim.Error("receiveMPK:Put SYSChaincode error: " + err.Error())
+		return shim.Error("handleFromAA AASecret:Communicate PKi error: " + err.Error())
 	}
-
-	//判断是否来自SYS
-	rightSYS,err := wrapper.IsSYS(stub, args)
-	if !rightSYS {
-		return shim.Error(err.Error())
-	}
-
-	//存储并使用MPK初始化
-	err = stub.PutState("PubKeyParams", []byte(args[2]))
-	if err != nil {
-		return shim.Error("receiveMPK:Put PubKeyParams error: " + err.Error())
-	}
-	aapubkey, err := stub.GetState("PubKey")
-	if err != nil {
-		return shim.Error("receiveMPK:Get AAPubKey error: " + err.Error())
-	}
-	t.T,t.N = wrapper.AASetup1(aapubkey)
-
 	return shim.Success(nil)
 }
+
+//args: r s "startABE3"
+func (t *Chaincode) startABE3(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if t.Initialized {
+		return shim.Error("Already initialized")
+	}
+	if len(args) != 3 {
+		return shim.Error("Incorrect number of arguments. Expecting 3")
+	}
+	rightOwner, err := wrapper.IsOwner(stub, args)
+	if !rightOwner {
+		return shim.Error("startABE1" + err.Error())
+	}
+
+	//AAsetup3
+	//集齐其他t-1个aa的Pki，生成e(g,g)^alpha
+	wrapper.AASetup3(t.PKi, t.Aid)
+	t.Initialized = true
+	return shim.Success(nil)
+}
+
 
 //***************************  Communicate with AA  ***************************
 //发送给其他AA, flag: "AASecret"/"AAPKi"
 func (t *Chaincode) sendToAA(stub shim.ChaincodeStubInterface, params []string, flag string) error {
+	fmt.Printf("sendtoaa:%s,%x\n",flag, params)
 	if flag == "AASecret" {
 		j := 0 //顺序对应的Sij
 		for i := 1; i <= t.N; i++ {
 			if "AA_"+strconv.Itoa(i) == t.MyId {
-				i++
+				continue
 			}
 			//call aa
 			passParams, err := wrapper.SignTransaction(stub, []string{flag, params[j]})
@@ -165,8 +176,11 @@ func (t *Chaincode) sendToAA(stub shim.ChaincodeStubInterface, params []string, 
 			}else {
 				id = "AA_"+strconv.Itoa(j+1)
 			}
-
-			passParams, err := wrapper.SignTransaction(stub, []string{flag, param, string(t.Aid[0])})
+			pubKey,err := stub.GetState("PubKey")
+			if err != nil {
+				return fmt.Errorf("sendToAA AAPKi:Get PubKey state:"+err.Error())
+			}
+			passParams, err := wrapper.SignTransaction(stub, []string{flag, param, string(pubKey)})
 			if err != nil {
 				return fmt.Errorf("sendToAA AAPKi:"+err.Error())
 			}
@@ -178,7 +192,11 @@ func (t *Chaincode) sendToAA(stub shim.ChaincodeStubInterface, params []string, 
 			}
 		}
 	}else if flag[:4] == "User"{
-		passparams, err := wrapper.SignTransaction(stub, []string{flag, params[0], params[1], string(t.Aid[0])})
+		pubKey,err := stub.GetState("PubKey")
+		if err != nil {
+			return fmt.Errorf("sendToAA AAPKi:Get PubKey state:"+err.Error())
+		}
+		passparams, err := wrapper.SignTransaction(stub, []string{flag, params[0], params[1], string(pubKey)})
 		if err != nil {
 			return fmt.Errorf(err.Error())
 		}
@@ -195,9 +213,6 @@ func (t *Chaincode) sendToAA(stub shim.ChaincodeStubInterface, params []string, 
 
 //args: AA_ID r s ("AASecret" "AASij")/("AAPKi" "PKi" "Aid")/("UserSignUp"/"UserChangePassword"/"UserGetTip" "UserName" "PartSk" "Aid")
 func (t *Chaincode) handleFromAA(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if t.Initialized {
-		return shim.Error("handleFromAA:Already initialized")
-	}
 	rightAA, err := wrapper.IsAA(stub, args)
 	if !rightAA {
 		return shim.Error(err.Error())
@@ -208,17 +223,7 @@ func (t *Chaincode) handleFromAA(stub shim.ChaincodeStubInterface, args []string
 		if len(args) != 5 {
 			return shim.Error("handleFromAA AASecret:Incorrect number of arguments. Expecting 5")
 		}
-		isEnough := wrapper.AppendSij(args[1])
-		//集齐其他n个aa的秘密Sij,生成AA的SK和PK，将PK分享出去
-		if isEnough {
-			tempPki, tempAid := wrapper.AASetup2()
-			t.PKi = append(t.PKi, tempPki)
-			t.Aid = append(t.Aid, tempAid)
-			err = t.sendToAA(stub, []string{string(tempPki)}, "AAPKi")
-			if err != nil {
-				return shim.Error("handleFromAA AASecret:Communicate PKi error: " + err.Error())
-			}
-		}
+		wrapper.AppendSij(args[4])
 		return shim.Success(nil)
 	case "AAPKi":
 		if len(args) != 6 {
@@ -226,11 +231,6 @@ func (t *Chaincode) handleFromAA(stub shim.ChaincodeStubInterface, args []string
 		}
 		t.PKi = append(t.PKi, []byte(args[4]))
 		t.Aid = append(t.Aid, []byte(args[5]))
-		//集齐其他t-1个aa的Pki，生成e(g,g)^alpha
-		if len(t.PKi) == t.T {
-			wrapper.AASetup3(t.PKi, t.Aid)
-			t.Initialized = true
-		}
 		return shim.Success(nil)
 	case "UserSignUp":
 		if len(args) != 7 {
@@ -372,7 +372,15 @@ func (t *Chaincode) attrFromSTR(stub shim.ChaincodeStubInterface) error {
 	if response.Status != 200 {
 		return fmt.Errorf("attrFromSTR:" + response.Message)
 	}
-	err = wrapper.UnMarshalMap(response.Payload)
+
+	length := len(response.Payload)
+	nowAttr,err := strconv.Atoi(string(response.Payload[length-1:]))
+	if err != nil {
+		return fmt.Errorf("attrFromSTR:Get NowAttr error!\n")
+	}
+	abeAttrs := response.Payload[:length-1]
+
+	err = wrapper.UnMarshalMap(abeAttrs, nowAttr)
 	if err != nil {
 		return fmt.Errorf("attrFromSTR: Unmarshal ABE's map error: " + err.Error())
 	}
@@ -428,12 +436,12 @@ func (t *Chaincode) userTipToSTR(stub shim.ChaincodeStubInterface, userData wrap
 }
 
 func (t *Chaincode) attrToSTR(stub shim.ChaincodeStubInterface) error {
-	attrs, err := wrapper.MarshalMap()
+	attrs, nowattr, err := wrapper.MarshalMap()
 	if err != nil {
 		return fmt.Errorf("attrToSTR:" + err.Error())
 	}
 
-	passparams, err := wrapper.SignTransaction(stub, []string{string(attrs)})
+	passparams, err := wrapper.SignTransaction(stub, []string{string(attrs), string(strconv.Itoa(nowattr))})
 	if err != nil {
 		return fmt.Errorf("attrToSTR: " + err.Error())
 	}
@@ -452,8 +460,8 @@ func (t *Chaincode) userMethod(stub shim.ChaincodeStubInterface, args []string) 
 	if len(args) != 4 {
 		return shim.Error("userMethod:Incorrect number of arguments. Expecting 4")
 	}
-	if t.Initialized {
-		return shim.Error("userMethod:Already initialized")
+	if !t.Initialized {
+		return shim.Error("userMethod:Not initialized")
 	}
 	rightOwner, err := wrapper.IsOwner(stub, args[1:])
 	if !rightOwner {
@@ -500,12 +508,15 @@ func (t *Chaincode) userSignUp(stub shim.ChaincodeStubInterface, args []string) 
 	if err != nil {
 		return shim.Error("userSignUp:Generate Part of User's sk error: " + err.Error())
 	}
-
-	passparams, err := wrapper.SignTransaction(stub, []string{string(partSk)})
+	pubKey,err := stub.GetState("PubKey")
+	if err != nil {
+		return shim.Error("sendToAA AAPKi:Get PubKey state:"+err.Error())
+	}
+	passparams, err := wrapper.SignTransaction(stub, []string{"UserSignUp",tempUserParams.UserName,string(partSk),string(pubKey)})
 	if err != nil {
 		return shim.Error("userSignUp: " + err.Error())
 	}
-	passparams = append([]string{tempUserParams.SpecialAAId+"cc", "userMethod", "UserSignUp", t.MyId}, passparams...)
+	passparams = append([]string{tempUserParams.SpecialAAId+"cc", "handleFromAA", t.MyId}, passparams...)
 	response := wrapper.Call(stub, passparams)
 	return response
 }
@@ -530,12 +541,15 @@ func (t *Chaincode) userChangePassword(stub shim.ChaincodeStubInterface, args []
 	if err != nil {
 		return shim.Error("GuserChangePassword:enerate Part of User's sk error: " + err.Error())
 	}
-
-	passparams, err := wrapper.SignTransaction(stub, []string{string(partSk)})
+	pubKey,err := stub.GetState("PubKey")
+	if err != nil {
+		return shim.Error("sendToAA AAPKi:Get PubKey state:"+err.Error())
+	}
+	passparams, err := wrapper.SignTransaction(stub, []string{"UserChangePassword", tempUserParams.UserName,string(partSk),string(pubKey)})
 	if err != nil {
 		return shim.Error("userChangePassword: " + err.Error())
 	}
-	passparams = append([]string{tempUserParams.SpecialAAId+"cc", "userMethod", "UserChangePassword", t.MyId}, passparams...)
+	passparams = append([]string{tempUserParams.SpecialAAId+"cc", "handleFromAA", t.MyId}, passparams...)
 	response := wrapper.Call(stub, passparams)
 	return response
 }
@@ -561,11 +575,15 @@ func (t *Chaincode) userGetTip(stub shim.ChaincodeStubInterface, args []string) 
 		return shim.Error("userGetTip:Generate Part of User's sk error: " + err.Error())
 	}
 
-	passparams, err := wrapper.SignTransaction(stub, []string{string(partSk)})
+	pubKey,err := stub.GetState("PubKey")
+	if err != nil {
+		return shim.Error("sendToAA AAPKi:Get PubKey state:"+err.Error())
+	}
+	passparams, err := wrapper.SignTransaction(stub, []string{"UserGetTip", tempUserParams.UserName,string(partSk),string(pubKey)})
 	if err != nil {
 		return shim.Error("userGetTip: " + err.Error())
 	}
-	passparams = append([]string{tempUserParams.SpecialAAId+"cc", "userMethod", "UserGetTip", t.MyId}, passparams...)
+	passparams = append([]string{tempUserParams.SpecialAAId+"cc", "handleFromAA", t.MyId}, passparams...)
 	response := wrapper.Call(stub, passparams)
 	return response
 }
@@ -577,7 +595,7 @@ func (t *Chaincode) userSignUpSpecial(stub shim.ChaincodeStubInterface, args []s
 		return shim.Error("userSignUpSpecial:Deserialize User's Data error: " + err.Error())
 	}
 
-	if tempUserParams.SpecialAAId == "" || tempUserParams.Aid != nil || tempUserParams.PartSk != nil || tempUserParams.UserName == "" || len(tempUserParams.UserAttributes) != 6{
+	if tempUserParams.Aid != nil || tempUserParams.PartSk != nil || tempUserParams.UserName == "" || len(tempUserParams.UserAttributes) != 6{
 		return shim.Error("userSignUpSpecial:Passing params something wrong")
 	}
 
@@ -596,7 +614,7 @@ func (t *Chaincode) userSignUpSpecial(stub shim.ChaincodeStubInterface, args []s
 	if err != nil {
 		return shim.Error("userSignUpSpecial error: " + err.Error())
 	}
-	
+
 	err = t.attrToSTR(stub)
 	if err != nil {
 		return shim.Error("userSignUpSpecial error: " + err.Error())
@@ -620,7 +638,7 @@ func (t *Chaincode) userOthersSpecial(stub shim.ChaincodeStubInterface, args []s
 		return shim.Error("userOthersSpecial:Deserialize User's Data error: " + err.Error())
 	}
 
-	if tempUserParams.SpecialAAId == "" || tempUserParams.Aid != nil || tempUserParams.PartSk != nil || tempUserParams.UserName == "" || len(tempUserParams.UserAttributes) == 0 {
+	if tempUserParams.Aid != nil || tempUserParams.PartSk != nil || tempUserParams.UserName == "" || len(tempUserParams.UserAttributes) == 0 {
 		return shim.Error("userOthersSpecial:Passing params something wrong")
 	}
 
@@ -701,6 +719,7 @@ func (t *Chaincode) getTip(stub shim.ChaincodeStubInterface, userData wrapper.Us
 //***************************  Third party method  ***************************
 //args: r s userName PasswordHash
 func (t *Chaincode) thirdVerify(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	//TODO 加入innitialize
 	if len(args) !=4 {
 		return shim.Error("Incorrect number of arguments. Expecting 4")
 	}
@@ -710,11 +729,12 @@ func (t *Chaincode) thirdVerify(stub shim.ChaincodeStubInterface, args []string)
 	}
 	//获取用户密钥hash
 	hash, err := t.userDataFromSTR(stub, args[2])
+	fmt.Printf("hash:%x\n",hash)
 	if err != nil {
 		return shim.Error("thirdVerify:" + err.Error())
 	}
 
-	if wrapper.Pbkdf2Verify([]byte(args[3]), hash){
+	if !wrapper.Pbkdf2Verify([]byte(args[3]), hash){
 		return shim.Error("Password unmatched!")
 	}
 	return shim.Success(nil)
@@ -733,12 +753,14 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 			return shim.Error("Invoke:GetState PubKey error\n")
 		}
 		return shim.Success(PubKey)
-	case "registerToSYS":
-		return t.registerToSYS(stub, args)
-	case "receiveMPK":
-		return t.receiveMPK(stub, args)
-	case "startABECommunicate":
-		return t.startABECommunicate(stub, args)
+	case "updateAAList":
+		return t.updateAAList(stub, args)
+	case "startABE1":
+		return t.startABE1(stub, args)
+	case "startABE2":
+		return t.startABE2(stub, args)
+	case "startABE3":
+		return t.startABE3(stub, args)
 	case "handleFromAA":
 		return t.handleFromAA(stub, args)
 	case "userMethod":
@@ -746,18 +768,18 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	case "thirdVerify":
 		return t.thirdVerify(stub, args)
 	default:
-		return shim.Error("Invalid invoke function name. Expecting \"getPubKey\" \"registerToSYS\" \"receiveMPK\" " +
-			"\"startABECommunicate\" \"handleFromAA\" \"userMethod\" \"thirdVerify\"")
+		return shim.Error("Invalid invoke function name. Expecting \"getPubKey\" " +
+			"\"startABE1\" \"startABE2\" \"startABE3\" \"handleFromAA\" \"userMethod\" \"thirdVerify\"")
 	}
 }
 
-//args: owner's_pubkey  AA_ID("AA_1")
+//args: owner's_pubkey  AA_ID("AA_1") AA's_prikey AA's_pubkey
 func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Println("AA Init")
 	_, args := stub.GetFunctionAndParameters()
 
-	if len(args) != 2 {
-		return shim.Error("Incorrect number of arguments. Expecting 2")
+	if len(args) != 4 {
+		return shim.Error("Incorrect number of arguments. Expecting 4")
 	}
 
 	//storage owner's pubkey
@@ -770,10 +792,7 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	t.MyId = args[1]
 
 	//chaincode's pair of keys
-	CCPrikey, CCPubkey, err := wrapper.EcdsaSetUpNormal()
-	if err!= nil {
-		return shim.Error("Init:" + err.Error())
-	}
+	CCPrikey, CCPubkey := []byte(args[2]),[]byte(args[3])
 
 	err = stub.PutState("PriKey", CCPrikey)
 	if err!= nil {
@@ -783,7 +802,28 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	if err!= nil {
 		return shim.Error("PutState Pubkey error\n")
 	}
+	fmt.Printf("%x\n",CCPrikey)
+	fmt.Printf("%x\n",CCPubkey)
+	//开始注册
+	response := t.registerToSYS(stub, string(CCPubkey))
+	if response.Status != 200 {
+		return response
+	}
+	mpk := response.Payload
+	//存储并使用MPK初始化
+	err = stub.PutState("PubKeyParams", []byte(mpk))
+	if err != nil {
+		return shim.Error("receiveMPK:Put PubKeyParams error: " + err.Error())
+	}
+	t.T,t.N = wrapper.AASetup1([]byte(mpk), CCPubkey)
+	t.TempUserParams = make(map[string]wrapper.UserData,1000)
 
+	//
+	//if id,err := strconv.Atoi(t.MyId[3:]);err!=nil {
+	//	return shim.Error(err.Error())
+	//}else {
+	//	wrapper.RPCADDRESS = "localhost:"+strconv.Itoa(9999+id)
+	//}
 	return shim.Success(nil)
 }
 
