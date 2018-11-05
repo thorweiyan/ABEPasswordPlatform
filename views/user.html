@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User</title>
+</head>
+<body>
+<h1>用户界面</h1>
+<h2>注册</h2>
+    <div >
+        <form id="user" action="/signup" method="post">
+            用户名：<input name="UserName" type="text" />
+            密码：<input id="password" name="UserPassword" type="text" onchange="gethash()"/>
+            密码哈希（SHA256）：<input id="passeordhash" name="UserPasswordHash" type="text" /><br>
+            更改密码的Policy：<input name="ChangePasswordPolicy" type="text" />
+            获取提示的Policy：<input name="GetTipPolicy" type="text" /><br>
+            附加属性提示信息：<input name="GetTipMessage" type="text" />
+            属性集合：<input name="UserAttributes" type="text" />
+            <input type="submit" value="注册" />
+        </form>
+    </div><br>
+
+<h2>改密码</h2>
+    <div >
+        <form id="user" action="/changepassword" method="post">
+            用户名：<input name="UserName" type="text" />
+            新密码：<input name="UserPassword" type="text" />
+            新密码哈希（SHA256）：<input name="UserPasswordHash" type="text" />
+            属性集合：<input name="UserAttributes" type="text" />
+            <input type="submit" value="申请改密码" />
+        </form>
+    </div><br>
+
+<h2>获取提示信息</h2>
+    <div >
+        <form id="user" action="/gettip" method="post">
+            用户名：<input name="UserName" type="text" />
+            属性集合：<input name="UserAttributes" type="text" />
+            <input type="submit" value="获取" />
+        </form>
+    </div>
+
+</form>
+
+{{/*<script type="text/javascript" src="js/sha256.js">*/}}
+    {{/*function gethash() {*/}}
+        {{/*var x = document.getElementById("password").value;*/}}
+        {{/*console.log(x);*/}}
+        {{/*console.log(sha256_digest(x));*/}}
+        {{/*document.getElementById("passeordhash").value = sha256_digest(x);*/}}
+    {{/*}*/}}
+
+{{/*</script>*/}}
+</body>
+</html>
