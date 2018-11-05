@@ -1,68 +1,54 @@
 package controllers
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego"
-	"strconv"
+	"github.com/cloudflare/cfssl/scan/crypto/sha256"
 	"github.com/thorweiyan/ABEPasswordPlatform/chaincodeImpl/wrapper"
+	"strings"
 )
 
 type user struct {
-	Id    int       `form:"-"`
-	Name  string 	`form:"username"`
-	Age   int       `form:"age"`
-	Email string
+	UserName             string		`json:"user_name"`
+	UserPasswordHash     string		//"xxxxxxxxx"
+	ChangePasswordPolicy string		//"CPP:xxxxx"
+	GetTipPolicy         string		//"GTP:xxxxx"
+	GetTipMessage        string		//"GTM:xxxxx"
+	UserAttributes       string		//"xxxxxxxxx"
 }
+
 
 type SignUpController struct {
 	beego.Controller
 }
 
 func (c *SignUpController)Get()  {
-	//c.Data["Website"] = "beego.me"
-	//c.Data["Email"] = "astaxie@gmail.com"
-	//c.TplName = "register.html"
-
-	json.NewEncoder(c.Ctx.ResponseWriter).Encode("success!") //给前端返回数据
+	c.TplName = "user.html"
 }
 
-func (c *SignUpController)Post()  {
-	//pkgname := c.GetString("pkgname")
-	//content := c.GetString("content")
-
-	jsoninfo := c.GetString("jsoninfo")
-	if jsoninfo == "" {
-		c.Ctx.WriteString("jsoninfo is empty")
-		return
-	}
-
+func (c *SignUpController)Post() {
 	u := user{}
 	if err := c.ParseForm(&u); err != nil {
 		fmt.Println(err)
 	} else {
-		content := "Name:" + u.Name + " Age: " + strconv.Itoa(u.Age) + " Email: " + u.Email
-		c.Ctx.WriteString("解析成功" + content)
+		fmt.Println("解析成功！" + u.UserName, u.UserPasswordHash,u.ChangePasswordPolicy,u.GetTipPolicy, u.GetTipMessage, u.UserAttributes)
+
+		userdata := wrapper.UserData{
+			UserName:             "UN:" + u.UserName,
+			UserPasswordHash:     []byte(fmt.Sprint(sha256.Sum256([]byte(u.UserPasswordHash)))),
+			ChangePasswordPolicy: "CPP:" + u.ChangePasswordPolicy,
+			GetTipPolicy:         "GTP:" + u.GetTipPolicy,
+			GetTipMessage:        "GTM:" + u.GetTipMessage,
+			UserAttributes:       strings.Split(u.UserAttributes, ","),
+		}
+		fmt.Println(userdata)
+
+		DoSdk(userdata, "UserSignUp")
+
+		//正确执行，返回200
+		c.Ctx.ResponseWriter.ResponseWriter.WriteHeader(200)
+		c.Ctx.WriteString("200")
 	}
-
-	userdata := wrapper.UserData{
-		UserName:u.Name,
-		UserPasswordHash:nil,
-		ChangePasswordPolicy:"",
-		GetTipPolicy:"",
-		GetTipMessage:"",
-		UserAttributes:[]string{},
-	}
-
-	fmt.Println(userdata)
-
-	//TODO 调用合约，注册新账户
-
-	//var at models.Article
-	//at.Pkgid = pk.Id
-	//at.Content = content
-	//models.InsertArticle(at)
-	//this.Ctx.Redirect(302, "/admin/index")
 }
 
 
@@ -70,15 +56,51 @@ type ChangePasswordController struct {
 	beego.Controller
 }
 
+func (c * ChangePasswordController)Get()  {
+	c.TplName = "user.html"
+}
+func (c *ChangePasswordController)Post()  {
+	//TODO 处理前端信息得到name、hash和属性集
+	u := user{}
+	if err := c.ParseForm(&u); err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("解析： ", u.UserName, u.UserPasswordHash, u.UserAttributes)
+
+		userdata := wrapper.UserData{
+			UserName:         "UN:" + u.UserName,
+			UserPasswordHash: []byte(fmt.Sprint(sha256.Sum256([]byte(u.UserPasswordHash)))),
+			UserAttributes:   strings.Split(u.UserAttributes, ","),
+		}
+		DoSdk(userdata, "UserChangePassword")
+
+		//正确执行，返回200
+		c.Ctx.ResponseWriter.ResponseWriter.WriteHeader(200)
+		c.Ctx.WriteString("200")
+	}
+}
 
 type GetTipController struct {
 	beego.Controller
 }
 
 func (c *GetTipController)Get()  {
-	
+	c.TplName = "user.html"
 }
 
-func (c *GetTipController)Post()  {
+func (c *GetTipController)Post() {
+	u := user{}
+	if err := c.ParseForm(&u); err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("解析： ", u.UserName, u.UserAttributes)
 
+		userdata := wrapper.UserData{
+			UserName:       "UN:" + u.UserName,
+			UserAttributes: strings.Split(u.UserAttributes, ","),
+		}
+		result := DoSdk(userdata, "UserGetTip")
+
+		c.Ctx.WriteString("tips: " + result)
+	}
 }
