@@ -1,0 +1,3 @@
+[submodule "chaincodeImpl/chaincode/System/vendor/github.com/thorweiyan/ABEPasswordPlatform"]
+	path = chaincodeImpl/chaincode/System/vendor/github.com/thorweiyan/ABEPasswordPlatform
+	url = https://github.com/thorweiyan/ABEPasswordPlatform.git
