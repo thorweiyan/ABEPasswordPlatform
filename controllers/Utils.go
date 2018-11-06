@@ -11,7 +11,9 @@ import (
 )
 
 func DoSdk(userdata wrapper.UserData, method string) (result string) {
-	//fmt.Printf("xxxxxxxxxxxxxxxx----------------%v\n",userdata)
+	fmt.Printf("xxxxxxxxxxxxxxxx----------------%v\n",userdata)
+	fmt.Printf("xxxxxxxxxxxxxxxx----------------%v\n",userdata.UserAttributes)
+	fmt.Printf("xxxxxxxxxxxxxxxx----------------%v\n",len(userdata.UserAttributes))
 	//return "sdad"
 	//调用special AA合约
 	special := Rand2(big.NewInt(0)).Int64()

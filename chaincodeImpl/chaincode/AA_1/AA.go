@@ -133,6 +133,10 @@ func (t *Chaincode) startABE3(stub shim.ChaincodeStubInterface, args []string) p
 	//集齐其他t-1个aa的Pki，生成e(g,g)^alpha
 	wrapper.AASetup3(t.PKi, t.Aid)
 	t.Initialized = true
+	err = stub.PutState("Initialized", []byte("true"))
+	if err != nil {
+		return shim.Error("Put Initialized error: " + err.Error())
+	}
 	return shim.Success(nil)
 }
 
@@ -627,7 +631,11 @@ func (t *Chaincode) userSignUpSpecial(stub shim.ChaincodeStubInterface, args []s
 	}
 
 	tempUserParams.PartSk = append(tempUserParams.PartSk, partSk)
-	tempUserParams.Aid = append(tempUserParams.Aid, t.Aid[0])
+	pubKey,err := stub.GetState("PubKey")
+	if err != nil {
+		return shim.Error("userSignupSpecial:Get PubKey state:"+err.Error())
+	}
+	tempUserParams.Aid = append(tempUserParams.Aid, pubKey)
 	t.TempUserParams[tempUserParams.UserName] = *tempUserParams
 	return shim.Success(nil)
 }
@@ -654,7 +662,11 @@ func (t *Chaincode) userOthersSpecial(stub shim.ChaincodeStubInterface, args []s
 		return shim.Error("userOthersSpecial:Generate Part of User's sk error: " + err.Error())
 	}
 	tempUserParams.PartSk = append(tempUserParams.PartSk, partSk)
-	tempUserParams.Aid = append(tempUserParams.Aid, t.Aid[0])
+	pubKey,err := stub.GetState("PubKey")
+	if err != nil {
+		return shim.Error("userOtherSpecial:Get PubKey state:"+err.Error())
+	}
+	tempUserParams.Aid = append(tempUserParams.Aid, pubKey)
 	t.TempUserParams[tempUserParams.UserName] = *tempUserParams
 	return shim.Success(nil)
 }
@@ -740,6 +752,53 @@ func (t *Chaincode) thirdVerify(stub shim.ChaincodeStubInterface, args []string)
 	}
 	return shim.Success(nil)
 }
+//恢复所有参数
+//args: r s recoverParams
+func (t *Chaincode) recoverParams(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) !=4 {
+		return shim.Error("Incorrect number of arguments. Expecting 4")
+	}
+	rightOwner, err := wrapper.IsOwner(stub, args)
+	if !rightOwner {
+		return shim.Error(err.Error())
+	}
+	//获取initialize等
+	temp, err := stub.GetState("Initialized")
+	if err != nil {
+		return shim.Error("Get Initialized error: " + err.Error())
+	}
+	if string(temp) == "true"{
+		t.Initialized = true
+	}else {
+		t.Initialized = false
+	}
+
+	temp, err = stub.GetState("MyId")
+	if err != nil {
+		return shim.Error("Get MyId error: " + err.Error())
+	}
+	t.MyId = string(temp)
+
+	temp, err = stub.GetState("N")
+	if err != nil {
+		return shim.Error("Get N error: " + err.Error())
+	}
+	t.N,err = strconv.Atoi(string(temp))
+	if err != nil {
+		return shim.Error("Get N error: " + err.Error())
+	}
+
+	temp, err = stub.GetState("T")
+	if err != nil {
+		return shim.Error("Get T error: " + err.Error())
+	}
+	t.T,err = strconv.Atoi(string(temp))
+	if err != nil {
+		return shim.Error("Get T error: " + err.Error())
+	}
+
+	return shim.Success(nil)
+}
 
 
 //***************************  Chaincode interface  ***************************
@@ -768,6 +827,8 @@ func (t *Chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.userMethod(stub, args)
 	case "thirdVerify":
 		return t.thirdVerify(stub, args)
+	case "recoverParams":
+		return t.recoverParams(stub, args)
 	default:
 		return shim.Error("Invalid invoke function name. Expecting \"getPubKey\" " +
 			"\"startABE1\" \"startABE2\" \"startABE3\" \"handleFromAA\" \"userMethod\" \"thirdVerify\"")
@@ -791,6 +852,10 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 
 	//storage my ID
 	t.MyId = args[1]
+	err = stub.PutState("MyId", []byte(args[1]))
+	if err != nil {
+		return shim.Error("Put MyId error: " + err.Error())
+	}
 
 	//chaincode's pair of keys
 	CCPrikey, CCPubkey := []byte(args[2]),[]byte(args[3])
@@ -817,14 +882,21 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 		return shim.Error("receiveMPK:Put PubKeyParams error: " + err.Error())
 	}
 	t.T,t.N = wrapper.AASetup1([]byte(mpk), CCPubkey)
+	err = stub.PutState("N", []byte(strconv.Itoa(t.N)))
+	if err != nil {
+		return shim.Error("Put N error: " + err.Error())
+	}
+	err = stub.PutState("T", []byte(strconv.Itoa(t.T)))
+	if err != nil {
+		return shim.Error("Put T error: " + err.Error())
+	}
 	t.TempUserParams = make(map[string]wrapper.UserData,1000)
 
-	//
-	//if id,err := strconv.Atoi(t.MyId[3:]);err!=nil {
-	//	return shim.Error(err.Error())
-	//}else {
-	//	wrapper.RPCADDRESS = "localhost:"+strconv.Itoa(9999+id)
-	//}
+	t.Initialized = false
+	err = stub.PutState("Initialized", []byte("false"))
+	if err != nil {
+		return shim.Error("Put Initialized error: " + err.Error())
+	}
 	return shim.Success(nil)
 }
 
