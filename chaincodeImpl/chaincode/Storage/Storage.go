@@ -151,6 +151,7 @@ func (t *Chaincode) get(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 		if err != nil {
 			return shim.Error(err.Error())
 		}
+		result2 = append([]byte("\n\n"),result2...)
 		return shim.Success(append(result,result2...))
 	default:
 		return shim.Error("Can't match any one")

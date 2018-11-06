@@ -373,12 +373,13 @@ func (t *Chaincode) attrFromSTR(stub shim.ChaincodeStubInterface) error {
 		return fmt.Errorf("attrFromSTR:" + response.Message)
 	}
 
-	length := len(response.Payload)
-	nowAttr,err := strconv.Atoi(string(response.Payload[length-1:]))
+
+	temp := wrapper.SplitStringbyn(string(response.Payload))
+	nowAttr,err := strconv.Atoi(temp[1])
 	if err != nil {
 		return fmt.Errorf("attrFromSTR:Get NowAttr error!\n")
 	}
-	abeAttrs := response.Payload[:length-1]
+	abeAttrs := []byte(temp[0])
 
 	err = wrapper.UnMarshalMap(abeAttrs, nowAttr)
 	if err != nil {

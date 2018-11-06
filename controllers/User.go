@@ -34,16 +34,16 @@ func (c *SignUpController)Post() {
 		fmt.Println("解析成功！" + u.UserName, u.UserPasswordHash,u.ChangePasswordPolicy,u.GetTipPolicy, u.GetTipMessage, u.UserAttributes)
 
 		userdata := wrapper.UserData{
-			UserName:             "UN:" + u.UserName,
+			UserName:             u.UserName,
 			UserPasswordHash:     []byte(fmt.Sprint(sha256.Sum256([]byte(u.UserPasswordHash)))),
-			ChangePasswordPolicy: "CPP:" + u.ChangePasswordPolicy,
-			GetTipPolicy:         "GTP:" + u.GetTipPolicy,
-			GetTipMessage:        "GTM:" + u.GetTipMessage,
+			ChangePasswordPolicy: u.ChangePasswordPolicy,
+			GetTipPolicy:         u.GetTipPolicy,
+			GetTipMessage:        u.GetTipMessage,
 			UserAttributes:       strings.Split(u.UserAttributes, ","),
 		}
 		fmt.Println(userdata)
 
-		DoSdk(userdata, "UserSignUp")
+		DoSdk(userdata, "userSignUp")
 
 		//正确执行，返回200
 		c.Ctx.ResponseWriter.ResponseWriter.WriteHeader(200)
@@ -68,11 +68,11 @@ func (c *ChangePasswordController)Post()  {
 		fmt.Println("解析： ", u.UserName, u.UserPasswordHash, u.UserAttributes)
 
 		userdata := wrapper.UserData{
-			UserName:         "UN:" + u.UserName,
+			UserName:         u.UserName,
 			UserPasswordHash: []byte(fmt.Sprint(sha256.Sum256([]byte(u.UserPasswordHash)))),
 			UserAttributes:   strings.Split(u.UserAttributes, ","),
 		}
-		DoSdk(userdata, "UserChangePassword")
+		DoSdk(userdata, "userChangePassword")
 
 		//正确执行，返回200
 		c.Ctx.ResponseWriter.ResponseWriter.WriteHeader(200)
@@ -96,10 +96,10 @@ func (c *GetTipController)Post() {
 		fmt.Println("解析： ", u.UserName, u.UserAttributes)
 
 		userdata := wrapper.UserData{
-			UserName:       "UN:" + u.UserName,
+			UserName:       u.UserName,
 			UserAttributes: strings.Split(u.UserAttributes, ","),
 		}
-		result := DoSdk(userdata, "UserGetTip")
+		result := DoSdk(userdata, "userGetTip")
 
 		c.Ctx.WriteString("tips: " + result)
 	}

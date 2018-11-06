@@ -30,12 +30,12 @@ func TestSignUpController_Post(t *testing.T) {
 	hash := string([]byte(fmt.Sprint(sha256.Sum256([]byte("123456")))))
 
 	userdata := url.Values{
-		"UserName":             {"roy"},
+		"UserName":             {"UN:roy"},
 		"UserPasswordHash":     {hash},
-		"ChangePasswordPolicy": {"roy AND shuai AND hei AND 0123456789 AND 9876543210"},
-		"GetTipPolicy":         {"roy AND 0123456789 AND 9876543210"},
+		"ChangePasswordPolicy": {"(UN:roy AND ZS:shuai AND ZS:hei AND SFZ:678987000236787654 AND SJ:17317301908)"},
+		"GetTipPolicy":         {"(UN:roy AND SFZ:678987000236787654 AND SJ:17317301908)"},
 		"GetTipMessage":        {"shuai & hei"},
-		"UserAttributes":       {"roy,678987000236787654,17317301908,zry_nuaa@897.com,shuai,hei"},
+		"UserAttributes":       {"UN:roy,SFZ:678987000236787654,SJ:17317301908,YX:zry_nuaa@897.com,ZS:shuai,ZS:hei"},
 	}
 
 	res := Dopost(userdata,"http://localhost:8000/signup")
@@ -46,9 +46,9 @@ func TestChangePasswordController_Post(t *testing.T) {
 
 	hash := []byte(fmt.Sprint(sha256.Sum256([]byte("123456789"))))
 	userdata := url.Values{
-		"UserName":         {"roy"},
+		"UserName":         {"UN:roy"},
 		"UserPasswordHash": {string(hash)},
-		"UserAttributes":   {"roy,678987000236787654,17317301908,shuai,hei"},
+		"UserAttributes":   {"UN:roy,SFZ:678987000236787654,SJ:17317301908,ZS:shuai,ZS:hei"},
 	}
 
 	res := Dopost(userdata,"http://localhost:8000/changepassword")
@@ -57,8 +57,8 @@ func TestChangePasswordController_Post(t *testing.T) {
 
 func TestGetTipController_Post(t *testing.T) {
 	userdata := url.Values{
-		"UserName":       {"roy"},
-		"UserAttributes": {"shuai,hei"},
+		"UserName":       {"UN:roy"},
+		"UserAttributes": {"UN:roy,SFZ:678987000236787654,SJ:17317301908"},
 	}
 	res := Dopost(userdata,"http://localhost:8000/gettip")
 	fmt.Println(res)

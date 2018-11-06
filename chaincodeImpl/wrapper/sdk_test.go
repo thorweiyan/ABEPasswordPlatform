@@ -29,12 +29,15 @@ var fSetup = fabric_go_sdk.FabricSetup{
 	UserName: "User1",
 }
 func TestAll(t *testing.T) {
+	//初始化channel
 	TestInitialize(t)
+	//安装并实例化合约
 	TestInstallAndInstantiateCC_SYS(t)
 	TestInstallAndInstantiateCC_STR(t)
 	TestInstallAndInstantiateCC_AA1(t)
 	TestInstallAndInstantiateCC_AA2(t)
 	TestInstallAndInstantiateCC_AA3(t)
+	//一系列配置操作
 	TestSYSputaaList(t)
 	TestUpdate1(t)
 	TestUpdate2(t)
@@ -51,8 +54,20 @@ func TestAll(t *testing.T) {
 
 	TestUserMethodsignups1(t)
 	TestUserMethodsignupn2(t)
-
+	//TestUserMethodsignups1(t)
+	//TestUserMethodsignupn2(t)
 	//
+	//
+	//TestUserMethodChanges1(t)
+	//TestUserMethodChangen2(t)
+	//
+	//TestUserMethodGetTips1(t)
+	//TestUserMethodGetTipn2(t)
+	//
+	//TestThirdParty(t)
+}
+
+func Test2(t *testing.T) {
 	TestUserMethodChanges1(t)
 	TestUserMethodChangen2(t)
 

@@ -11,16 +11,18 @@ import (
 )
 
 func DoSdk(userdata wrapper.UserData, method string) (result string) {
-
+	//fmt.Printf("xxxxxxxxxxxxxxxx----------------%v\n",userdata)
+	//return "sdad"
 	//调用special AA合约
 	special := Rand2(big.NewInt(0)).Int64()
-	sccId := "AA_" + strconv.Itoa(int(special))
+	sId := "AA_" + strconv.Itoa(int(special))
+	sccId := sId + "cc"
 	fmt.Println("special ccId: ", sccId)
 
 	sOwnerPriKey,_ := hex.DecodeString(AAkey[special-1].prikey)
 	fmt.Println("sOwnerPriKey: ", sOwnerPriKey)
 
-	fmt.Println("method: ", method)
+	fmt.Println("method: ", method+"Special")
 
 	models.SdkUserMethods(sccId, sOwnerPriKey, userdata, method)
 
@@ -29,11 +31,11 @@ func DoSdk(userdata wrapper.UserData, method string) (result string) {
 	data := wrapper.UserData{
 		UserName:             userdata.UserName,
 		UserAttributes:       userdata.UserAttributes,
-		SpecialAAId: sccId,
+		SpecialAAId: sId,
 	}
 	fmt.Println(data)
 	normal := Rand2(big.NewInt(special)).Int64()
-	nccId := "AA_" + strconv.Itoa(int(normal))
+	nccId := "AA_" + strconv.Itoa(int(normal)) + "cc"
 	fmt.Println("normal ccId: ", nccId)
 
 	nOwnerPriKey,_ := hex.DecodeString(AAkey[normal-1].prikey)
