@@ -3,7 +3,6 @@ package controllers
 import (
 	"fmt"
 	"github.com/astaxie/beego"
-	"github.com/cloudflare/cfssl/scan/crypto/sha256"
 	"github.com/thorweiyan/ABEPasswordPlatform/chaincodeImpl/wrapper"
 	"strings"
 )
@@ -35,7 +34,7 @@ func (c *SignUpController)Post() {
 
 		userdata := wrapper.UserData{
 			UserName:             u.UserName,
-			UserPasswordHash:     []byte(fmt.Sprint(sha256.Sum256([]byte(u.UserPasswordHash)))),
+			UserPasswordHash:     []byte(u.UserPasswordHash),
 			ChangePasswordPolicy: u.ChangePasswordPolicy,
 			GetTipPolicy:         u.GetTipPolicy,
 			GetTipMessage:        u.GetTipMessage,
@@ -69,7 +68,7 @@ func (c *ChangePasswordController)Post()  {
 
 		userdata := wrapper.UserData{
 			UserName:         u.UserName,
-			UserPasswordHash: []byte(fmt.Sprint(sha256.Sum256([]byte(u.UserPasswordHash)))),
+			UserPasswordHash: []byte(u.UserPasswordHash),
 			UserAttributes:   strings.Split(u.UserAttributes, ","),
 		}
 		DoSdk(userdata, "userChangePassword")
