@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Key Agent</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+</head>
+<body>
+    <el-container id="app" class="app">
+    <el-header>
+        <h1 class="center">{{info.header}}</h1>
+    </el-header>
+    <el-main>
+    <el-row>
+        <el-tabs type="border-card" @tab-click="changeTab">
+            <el-tab-pane label="R">
+                <span slot="label"><i class="el-icon-upload"></i> 注册</span>
+                <el-col :span="12">
+                    <p>Register</p>
+                </el-col>
+                <el-col :span="12" class="right">
+                    <el-button 
+                    type="info" 
+                    icon="el-icon-edit"
+                    @click="GenPolicy()"
+                    alt="生成policy"
+                    circle></el-button>
+                    <el-button 
+                    type="success" 
+                    icon="el-icon-check" 
+                    :disabled="!canRegister"
+                    @click="Register()"
+                    alt="注册"
+                    circle></el-button>
+                </el-col>
+                <el-col :span="24">
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="User Name"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.name"
+                    clearable>
+                    </el-input>
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="Password"                
+                    type="password"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.pass"                
+                    @change="confirmPass()"
+                    clearable>
+                    </el-input>
+                    <el-input
+                    type="password"
+                    class="margin-top-5"
+                    placeholder="Confirm Password"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.passpass"
+                    @change="confirmPass()"
+                    clearable>
+                    </el-input>
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="身份证"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.SFZ"
+                    clearable>
+                    </el-input>
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="手机"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.SJ"
+                    clearable>
+                    </el-input>
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="邮箱"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.YX"
+                    clearable>
+                    </el-input>
+                </el-col>
+                <el-col :span="24" class="margin-top-5">
+                    <el-input
+                    v-if="newAttr.show"
+                    v-model="newAttr.value"
+                    ref="save"
+                    size="small"
+                    @keyup.enter.native="handleInputConfirm()"
+                    @blur="handleInputConfirm()"
+                    ></el-input>
+                    <el-button 
+                    v-else 
+                    size="small" 
+                    @click="showInput()"
+                    icon="el-icon-plus"
+                    type="success"
+                    style="display:inline-block"
+                    >自设属性</el-button>
+                </el-col>
+                <el-col :span="24">用户属性:</el-col>
+                <el-col :span="24">
+                    <el-tag class="margin-3" type="info">UN:{{user.name}}</el-tag>
+                    <el-tag class="margin-3" type="info">SFZ:{{user.SFZ}}</el-tag>
+                    <el-tag class="margin-3" type="info">SJ:{{user.SJ}}</el-tag>
+                    <el-tag class="margin-3" type="info">YX:{{user.YX}}</el-tag>
+                </el-col>
+                <el-col :span="24">
+                    <el-tag
+                    :key="attr"
+                    v-for="attr in user.attr"
+                    closable
+                    class="margin-3"
+                    type="success"
+                    :disable-transitions="false"
+                    @close="delAttr(attr)">
+                    ZS:{{attr}}
+                    </el-tag>
+                </el-col>
+                <el-col :span="24" class="margin-top-5">
+                    <el-input
+                    type="textarea"
+                    :rows="2"
+                    placeholder="password policy"
+                    v-model="user.policy.pass">
+                    </el-input>
+                </el-col>
+                <el-col :span="24" class="margin-top-5">
+                    <el-input
+                    type="textarea"
+                    :rows="2"
+                    placeholder="tip policy"
+                    v-model="user.policy.tip">
+                    </el-input>
+                </el-col>
+            </el-tab-pane>
+            <el-tab-pane label="L">
+                <span slot="label"><i class="el-icon-menu"></i> 登录</span>
+                <el-col :span="12">
+                    <p>Login</p>
+                </el-col>
+                <el-col :span="12" class="right">
+                    <el-button 
+                    type="success" 
+                    icon="el-icon-check" 
+                    :disabled="!canLogin"
+                    @click="Login()"
+                    circle></el-button>
+                </el-col>
+                <el-col :span="24">
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="User Name"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.name"
+                    clearable>
+                    </el-input>
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="Password"                
+                    type="password"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.pass"                
+                    @change="confirmPass()"
+                    clearable>
+                    </el-input>
+                </el-col>
+            </el-tab-pane>
+            <el-tab-pane label="C">
+                <span slot="label"><i class="el-icon-menu"></i> 改密</span>
+                <el-col :span="12">
+                    <p>Modify Password</p>
+                </el-col>
+                <el-col :span="12" class="right">
+                    <el-button 
+                    type="info" 
+                    icon="el-icon-edit"
+                    @click="GenPolicy()"
+                    alt="生成policy"
+                    circle></el-button>
+                    <el-button 
+                    type="success" 
+                    icon="el-icon-check" 
+                    :disabled="!canChangePass"
+                    @click="ChangePass()"
+                    circle></el-button>
+                </el-col>
+                <el-col :span="24">
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="User Name"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.name"
+                    clearable>
+                    </el-input>
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="Password"                
+                    type="password"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.pass"                
+                    @change="confirmPass()"
+                    clearable>
+                    </el-input>
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="身份证"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.SFZ"
+                    clearable>
+                    </el-input>
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="手机"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.SJ"
+                    clearable>
+                    </el-input>
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="邮箱"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.YX"
+                    clearable>
+                    </el-input>
+                </el-col>
+                <el-col :span="24" class="margin-top-5">
+                    <el-input
+                    v-if="newAttr.show"
+                    v-model="newAttr.value"
+                    ref="save"
+                    size="small"
+                    @keyup.enter.native="handleInputConfirm()"
+                    @blur="handleInputConfirm()"
+                    ></el-input>
+                    <el-button 
+                    v-else 
+                    size="small" 
+                    @click="showInput()"
+                    icon="el-icon-plus"
+                    type="success"
+                    style="display:inline-block"
+                    >自设属性</el-button>
+                </el-col>
+                <el-col :span="24">用户属性:</el-col>
+                <el-col :span="24">
+                    <el-tag class="margin-3" type="info">UN:{{user.name}}</el-tag>
+                    <el-tag class="margin-3" type="info">SFZ:{{user.SFZ}}</el-tag>
+                    <el-tag class="margin-3" type="info">SJ:{{user.SJ}}</el-tag>
+                    <el-tag class="margin-3" type="info">YX:{{user.YX}}</el-tag>
+                </el-col>
+                <el-col :span="24">
+                    <el-tag
+                    :key="attr"
+                    v-for="attr in user.attr"
+                    closable
+                    class="margin-3"
+                    type="success"
+                    :disable-transitions="false"
+                    @close="delAttr(attr)">
+                    ZS:{{attr}}
+                    </el-tag>
+                </el-col>
+                <el-col :span="24" class="margin-top-5">
+                    <el-input
+                    type="textarea"
+                    :rows="2"
+                    placeholder="password policy"
+                    v-model="user.policy.pass">
+                    </el-input>
+                </el-col>
+                <el-col :span="24" class="margin-top-5">
+                    <el-input
+                    type="textarea"
+                    :rows="2"
+                    placeholder="tip policy"
+                    v-model="user.policy.tip">
+                    </el-input>
+                </el-col>
+            </el-tab-pane>
+            <el-tab-pane label="T">
+                <span slot="label"><i class="el-icon-menu"></i> 提示</span>
+                <el-col :span="12">
+                    <p>Get Tip</p>
+                </el-col>
+                <el-col :span="12" class="right">
+                    <el-button 
+                    type="success" 
+                    icon="el-icon-check" 
+                    :disabled="!canGetTip"
+                    @click="GetTip()"
+                    circle></el-button>
+                </el-col>
+                <el-col :span="24">
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="User Name"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.name"
+                    clearable>
+                    </el-input>
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="身份证"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.SFZ"
+                    clearable>
+                    </el-input>
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="手机"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.SJ"
+                    clearable>
+                    </el-input>
+                    <el-input
+                    class="margin-top-5"
+                    placeholder="邮箱"
+                    prefix-icon="el-icon-caret-right"
+                    v-model="user.YX"
+                    clearable>
+                    </el-input>
+                </el-col>
+                <el-col :span="24" class="margin-top-5">
+                    <el-input
+                    v-if="newAttr.show"
+                    v-model="newAttr.value"
+                    ref="save"
+                    size="small"
+                    @keyup.enter.native="handleInputConfirm()"
+                    @blur="handleInputConfirm()"
+                    ></el-input>
+                    <el-button 
+                    v-else 
+                    size="small" 
+                    @click="showInput()"
+                    icon="el-icon-plus"
+                    type="success"
+                    style="display:inline-block"
+                    >自设属性</el-button>
+                </el-col>
+                <el-col :span="24">用户属性:</el-col>
+                <el-col :span="24">
+                    <el-tag class="margin-3" type="info">UN:{{user.name}}</el-tag>
+                    <el-tag class="margin-3" type="info">SFZ:{{user.SFZ}}</el-tag>
+                    <el-tag class="margin-3" type="info">SJ:{{user.SJ}}</el-tag>
+                    <el-tag class="margin-3" type="info">YX:{{user.YX}}</el-tag>
+                </el-col>
+                <el-col :span="24">
+                    <el-tag
+                    :key="attr"
+                    v-for="attr in user.attr"
+                    closable
+                    class="margin-3"
+                    type="success"
+                    :disable-transitions="false"
+                    @close="delAttr(attr)">
+                    ZS:{{attr}}
+                    </el-tag>
+                </el-col>
+            </el-tab-pane>
+        </el-tabs>
+    </el-row>
+    <el-row>
+        
+            <div class="scroll-area">
+                <div class="scroll">
+                    <span class="today-scroll-content">复旦ABE</span>
+                    <span class="today-scroll-content">ABE中的战斗机 oh~yeah~</span>
+                </div>
+            </div>
+    </el-row>
+    </el-main>
+    <el-footer><p class="center"><code>{{info.footer}}</code></p></el-footer>
+    </el-container>
+</body>
+    
+    <!-- Vue -->
+    <script src="js/vue/vue.min.js"></script>
+    <!-- Element UI -->
+    <link rel="stylesheet" href="js/element-ui/lib/theme-chalk/index.css">
+    <!-- Element UI -->
+    <script src="js/element-ui/lib/index.js"></script>
+    <!-- crypto-js -->
+    <script src="js/crypto-js/crypto-js.js"></script>
+    <!-- axios -->
+    <script src="js/axios/axios.min.js"></script>
+    
+    <!-- Customized -->
+    <link rel="stylesheet" type="text/css" media="screen" href="css/main.css" />
+    <script src="html.js/main.js"></script>
+</html>

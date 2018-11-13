@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/thorweiyan/ABEPasswordPlatform/chaincodeImpl/wrapper"
-	"github.com/thorweiyan/ABEPasswordPlatform/models"
 	"math/big"
 	"strconv"
 )
@@ -26,8 +25,7 @@ func DoSdk(userdata wrapper.UserData, method string) (result string) {
 
 	fmt.Println("method: ", method+"Special")
 
-	models.SdkUserMethods(sccId, sOwnerPriKey, userdata, method)
-
+	//models.SdkUserMethods(sccId, sOwnerPriKey, userdata, method)
 
 	//调用normal AA合约
 	data := wrapper.UserData{
@@ -43,7 +41,7 @@ func DoSdk(userdata wrapper.UserData, method string) (result string) {
 	nOwnerPriKey,_ := hex.DecodeString(AAkey[normal-1].prikey)
 	fmt.Println("nOwnerPriKey: ", nOwnerPriKey)
 
-	models.SdkUserMethodn(nccId, nOwnerPriKey, data, method)
+	//models.SdkUserMethodn(nccId, nOwnerPriKey, data, method)
 
 	return "SUCCESS!"
 }

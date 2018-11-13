@@ -1,0 +1,68 @@
+.center{
+    text-align: center
+}
+.right{
+    text-align: right
+}
+.app{
+    padding-left: 30%;
+    padding-right: 30%;
+}
+.margin-3{
+    margin: 3px;
+}
+.margin-top-5{
+    margin-top: 5px;
+}
+
+
+/* paomadeng */
+.scroll-area{
+    position:relative;
+    height:40px;
+    border:1px solid #ccc;
+    width:100%;
+    overflow:hidden;
+}
+                        
+.scroll{
+    position:absolute;
+    line-height:40px;
+    left:100%;
+    top:0px;
+    white-space: nowrap;
+    -webkit-animation:todayScroll 5s linear infinite;
+    animation:todayScroll 5s linear infinite;
+}
+
+.today-scroll-content{
+    margin-right:3em;
+}
+                        
+@-webkit-keyframes todayScroll  {
+    0% {-webkit-transform:translate(0%);color: rgb(0, 0, 0)}
+    10% {-webkit-transform:translate(-25%);color: rgb(0, 128, 0)}
+    20% {-webkit-transform:translate(-50%);color: rgb(0, 0, 128)}
+    30% {-webkit-transform:translate(-75%);color: rgb(128, 0, 0)}
+    40% {-webkit-transform:translate(-100%);color: rgb(128, 128, 0)}
+    50% {-webkit-transform:translate(-125%);color: rgb(0, 128, 128)}
+    60% {-webkit-transform:translate(-150%);color: rgb(128, 0, 128)}
+    70% {-webkit-transform:translate(-175%);color: rgb(255, 255, 0)}
+    80% {-webkit-transform:translate(-200%);color: rgb(0, 255, 255)}
+    90% {-webkit-transform:translate(-225%);color: rgb(255, 0, 255)}
+    100% {-webkit-transform:translate(-250%);color: rgb(255, 255, 255)}
+}
+                        
+@keyframes todayScroll {
+    0% {transform:translate(0%);color: rgb(0, 0, 0)}
+    10% {transform:translate(-25%);color: rgb(0, 128, 0)}
+    20% {transform:translate(-50%);color: rgb(0, 0, 128)}
+    30% {transform:translate(-75%);color: rgb(128, 0, 0)}
+    40% {transform:translate(-100%);color: rgb(128, 128, 0)}
+    50% {transform:translate(-125%);color: rgb(0, 128, 128)}
+    60% {transform:translate(-150%);color: rgb(128, 0, 128)}
+    70% {transform:translate(-175%);color: rgb(255, 255, 0)}
+    80% {transform:translate(-200%);color: rgb(0, 255, 255)}
+    90% {transform:translate(-225%);color: rgb(255, 0, 255)}
+    100% {transform:translate(-250%);color: rgb(255, 255, 255)}
+}
