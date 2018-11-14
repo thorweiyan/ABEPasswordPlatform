@@ -10,7 +10,7 @@ import (
 	"strconv"
 )
 
-func DoSdk(userdata wrapper.UserData, method string) (result string) {
+func DoSdk(userdata wrapper.UserData, method string) (string, error) {
 	fmt.Printf("xxxxxxxxxxxxxxxx----------------%v\n",userdata)
 	fmt.Printf("xxxxxxxxxxxxxxxx----------------%v\n",userdata.UserAttributes)
 	fmt.Printf("xxxxxxxxxxxxxxxx----------------%v\n",len(userdata.UserAttributes))
@@ -22,11 +22,13 @@ func DoSdk(userdata wrapper.UserData, method string) (result string) {
 	fmt.Println("special ccId: ", sccId)
 
 	sOwnerPriKey,_ := hex.DecodeString(AAkey[special-1].prikey)
-	fmt.Println("sOwnerPriKey: ", sOwnerPriKey)
-
+	//fmt.Println("sOwnerPriKey: ", sOwnerPriKey)
 	fmt.Println("method: ", method+"Special")
 
-	models.SdkUserMethods(sccId, sOwnerPriKey, userdata, method)
+	result, err := models.SdkUserMethods(sccId, sOwnerPriKey, userdata, method)
+	if err != nil{
+		return result, err
+	}
 
 	//调用normal AA合约
 	data := wrapper.UserData{
@@ -40,11 +42,10 @@ func DoSdk(userdata wrapper.UserData, method string) (result string) {
 	fmt.Println("normal ccId: ", nccId)
 
 	nOwnerPriKey,_ := hex.DecodeString(AAkey[normal-1].prikey)
-	fmt.Println("nOwnerPriKey: ", nOwnerPriKey)
+	//fmt.Println("nOwnerPriKey: ", nOwnerPriKey)
 
-	models.SdkUserMethodn(nccId, nOwnerPriKey, data, method)
-
-	return "SUCCESS!"
+	result,err = models.SdkUserMethodn(nccId, nOwnerPriKey, data, method)
+	return result, err
 }
 
 //传进来一个数值，生成除了这个数值外的任意一个随机数
