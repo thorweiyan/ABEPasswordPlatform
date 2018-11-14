@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/astaxie/beego"
 	"github.com/thorweiyan/ABEPasswordPlatform/chaincodeImpl/wrapper"
+	"net/http"
 	"strings"
 )
 
@@ -41,12 +42,13 @@ func (c *SignUpController)Post() {
 	}
 	fmt.Println(userdata)
 
-	DoSdk(userdata, "userSignUp")
+	_, err := DoSdk(userdata, "userSignUp")
 
-	//正确执行，返回200
-	c.Ctx.ResponseWriter.ResponseWriter.WriteHeader(200)
-	c.Ctx.WriteString("200")
-
+	if err != nil{
+		fmt.Fprint(c.Ctx.ResponseWriter, http.StatusForbidden) //403
+	}else {
+		fmt.Fprint(c.Ctx.ResponseWriter, http.StatusOK)
+	}
 }
 
 
@@ -69,11 +71,13 @@ func (c *ChangePasswordController)Post() {
 		UserPasswordHash: []byte(u.UserPasswordHash),
 		UserAttributes:   strings.Split(u.UserAttributes, ","),
 	}
-	DoSdk(userdata, "userChangePassword")
+	_, err := DoSdk(userdata, "userChangePassword")
 
-	//正确执行，返回200
-	c.Ctx.ResponseWriter.ResponseWriter.WriteHeader(200)
-	c.Ctx.WriteString("200")
+	if err != nil{
+		fmt.Fprint(c.Ctx.ResponseWriter, http.StatusForbidden) //403
+	}else {
+		fmt.Fprint(c.Ctx.ResponseWriter, http.StatusOK)
+	}
 }
 
 type GetTipController struct {
@@ -94,7 +98,11 @@ func (c *GetTipController)Post() {
 		UserName:       u.UserName,
 		UserAttributes: strings.Split(u.UserAttributes, ","),
 	}
-	result := DoSdk(userdata, "userGetTip")
+	result,err := DoSdk(userdata, "userGetTip")
 
-	c.Ctx.WriteString("tips: " + result)
+	if err != nil{
+		fmt.Fprint(c.Ctx.ResponseWriter, http.StatusForbidden) //403
+	}else {
+		c.Ctx.WriteString(result) //返回tip
+	}
 }

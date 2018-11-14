@@ -193,22 +193,23 @@ func SdkSYSputaaList() {
 }
 
 
-func SdkUserMethods(ccId string, OwnerPriKey []byte, data wrapper.UserData, method string) {
+func SdkUserMethods(ccId string, OwnerPriKey []byte, data wrapper.UserData, method string) (string, error) {
 	fSetup.ChainCodeID = ccId
 	pass,err := data.Serialize()
 	fmt.Println("serialerr:",err)
 	params,_ := signTransaction(OwnerPriKey, []string{string(pass)})
 	params = append([]string{"userMethod",method+"Special"}, params...)
 	trcid, err := fSetup.Invoke(params)
-	if err != nil {
-		fmt.Println("invoke error!", err)
-	}
+	//if err != nil {
+	//	fmt.Println("invoke error!", err)
+	//}
 	//fmt.Println(trcid)
-	fmt.Printf("%v\n",trcid)
-	fmt.Printf("%x\n",trcid)
+	//fmt.Printf("%v\n",trcid)
+	//fmt.Printf("%x\n",trcid)
+	return trcid, err
 }
 
-func SdkUserMethodn(ccId string, OwnerPriKey []byte, data wrapper.UserData, method string) {
+func SdkUserMethodn(ccId string, OwnerPriKey []byte, data wrapper.UserData, method string) (string, error) {
 	fSetup.ChainCodeID = ccId
 
 	pass,err := data.Serialize()
@@ -216,16 +217,17 @@ func SdkUserMethodn(ccId string, OwnerPriKey []byte, data wrapper.UserData, meth
 	params,_ := signTransaction(OwnerPriKey, []string{string(pass)})
 	params = append([]string{"userMethod",method}, params...)
 	trcid, err := fSetup.Invoke(params)
-	if err != nil {
-		fmt.Println("invoke error!", err)
-	}
+	//if err != nil {
+	//	fmt.Println("invoke error!", err)
+	//}
 	//fmt.Println(trcid)
-	fmt.Printf("%v\n",trcid)
-	fmt.Printf("%x\n",trcid)
+	//fmt.Printf("%v\n",trcid)
+	//fmt.Printf("%x\n",trcid)
+	return trcid, err
 }
 
 
-func SdkThirdParty(ccId string, OwnerPriKey []byte, userName string, passwordHash []byte) {
+func SdkThirdParty(ccId string, OwnerPriKey []byte, userName string, passwordHash []byte) (string, error) {
 	fSetup.ChainCodeID = ccId
 	passParams, err := signTransaction(OwnerPriKey,[]string{userName, string(passwordHash)})
 	if err != nil {
@@ -233,11 +235,12 @@ func SdkThirdParty(ccId string, OwnerPriKey []byte, userName string, passwordHas
 	}
 	passParams = append([]string{"thirdVerify"}, passParams...)
 	trcid, err := fSetup.Invoke(passParams)
-	if err != nil {
-		fmt.Println("invoke error!", err)
-	}
-	fmt.Println(trcid)
-	fmt.Printf("%x\n",trcid)
+	//if err != nil {
+	//	fmt.Println("invoke error!", err)
+	//}
+	//fmt.Println(trcid)
+	//fmt.Printf("%x\n",trcid)
+	return trcid, err
 }
 
 
