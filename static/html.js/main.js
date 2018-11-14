@@ -74,7 +74,8 @@ var app = new Vue({
                 console.log(response);
                 _this.$notify.info({
                     title: 'success',
-                    message: JSON.stringify(response,null,4),
+                    dangerouslyUseHTMLString: true,
+                    message: `<pre>${JSON.stringify(response,null,4)}</pre>`,
                     duration: 0
                 });
             })
@@ -82,7 +83,8 @@ var app = new Vue({
                 console.log(error);
                 _this.$notify.error({
                     title: 'error',
-                    message: JSON.stringify(error,null,4),
+                    dangerouslyUseHTMLString: true,
+                    message: `<pre>${JSON.stringify(error,null,4)}</pre>`,
                     duration: 0
                 });
             });
@@ -128,7 +130,8 @@ var app = new Vue({
                 console.log(response);
                 _this.$notify.info({
                     title: 'success',
-                    message: JSON.stringify(response,null,4),
+                    dangerouslyUseHTMLString: true,
+                    message: `<pre>${JSON.stringify(response,null,4)}</pre>`,
                     duration: 0
                 });
             })
@@ -136,7 +139,8 @@ var app = new Vue({
                 console.log(error);
                 _this.$notify.error({
                     title: 'error',
-                    message: JSON.stringify(error,null,4),
+                    dangerouslyUseHTMLString: true,
+                    message: `<pre>${JSON.stringify(error,null,4)}</pre>`,
                     duration: 0
                 });
             });
@@ -165,7 +169,8 @@ var app = new Vue({
                 console.log(response);
                 _this.$notify.info({
                     title: 'success',
-                    message: JSON.stringify(response,null,4),
+                    dangerouslyUseHTMLString: true,
+                    message: `<pre>${JSON.stringify(response,null,4)}</pre>`,
                     duration: 0
                 });
             })
@@ -173,7 +178,8 @@ var app = new Vue({
                 console.log(error);
                 _this.$notify.error({
                     title: 'error',
-                    message: JSON.stringify(error,null,4),
+                    dangerouslyUseHTMLString: true,
+                    message: `<pre>${JSON.stringify(error,null,4)}</pre>`,
                     duration: 0
                 });
             });
@@ -194,7 +200,8 @@ var app = new Vue({
                 console.log(response);
                 _this.$notify.info({
                     title: 'success',
-                    message: JSON.stringify(response,null,4),
+                    dangerouslyUseHTMLString: true,
+                    message: `<pre>${JSON.stringify(response,null,4)}</pre>`,
                     duration: 0
                 });
             })
@@ -202,7 +209,8 @@ var app = new Vue({
                 console.log(error);
                 _this.$notify.error({
                     title: 'error',
-                    message: JSON.stringify(error,null,4),
+                    dangerouslyUseHTMLString: true,
+                    message: `<pre>${JSON.stringify(error,null,4)}</pre>`,
                     duration: 0
                 });
             });
