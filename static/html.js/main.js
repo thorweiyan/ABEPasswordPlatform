@@ -67,13 +67,24 @@ var app = new Vue({
 
             // data post here
             console.log(_Post)
+            let _this = this
 
             axios.post('/signup', _Post)
             .then(function (response) {
                 console.log(response);
+                _this.$notify.info({
+                    title: 'success',
+                    message: JSON.stringify(response,null,4),
+                    duration: 0
+                });
             })
             .catch(function (error) {
                 console.log(error);
+                _this.$notify.error({
+                    title: 'error',
+                    message: JSON.stringify(error,null,4),
+                    duration: 0
+                });
             });
         },
         GenPolicy(){
@@ -111,13 +122,23 @@ var app = new Vue({
 
             // data post here
             console.log(_Post)
-
+            let _this = this
             axios.post('/changepassword', _Post)
             .then(function (response) {
                 console.log(response);
+                _this.$notify.info({
+                    title: 'success',
+                    message: JSON.stringify(response,null,4),
+                    duration: 0
+                });
             })
             .catch(function (error) {
                 console.log(error);
+                _this.$notify.error({
+                    title: 'error',
+                    message: JSON.stringify(error,null,4),
+                    duration: 0
+                });
             });
         },
         GetTip(){
@@ -138,13 +159,23 @@ var app = new Vue({
 
             // data post here
             console.log(_Post)
-
+            let _this = this
             axios.post('/gettip', _Post)
             .then(function (response) {
                 console.log(response);
+                _this.$notify.info({
+                    title: 'success',
+                    message: JSON.stringify(response,null,4),
+                    duration: 0
+                });
             })
             .catch(function (error) {
                 console.log(error);
+                _this.$notify.error({
+                    title: 'error',
+                    message: JSON.stringify(error,null,4),
+                    duration: 0
+                });
             });
         },
         Login(){
@@ -157,13 +188,23 @@ var app = new Vue({
 
             // data post here
             console.log(_Post)
-
+            let _this = this
             axios.post('/login', _Post)
             .then(function (response) {
                 console.log(response);
+                _this.$notify.info({
+                    title: 'success',
+                    message: JSON.stringify(response,null,4),
+                    duration: 0
+                });
             })
             .catch(function (error) {
                 console.log(error);
+                _this.$notify.error({
+                    title: 'error',
+                    message: JSON.stringify(error,null,4),
+                    duration: 0
+                });
             });
         },
 
@@ -194,6 +235,15 @@ var app = new Vue({
         },
 
         showInput() {
+            if (this.user.attr.length>=2) {
+                this.$notify({
+                    title: '警告',
+                    message: '自设属性不能超过 2 个',
+                    type: 'warning',
+                    duration: 0
+                });
+                return
+            }
             this.newAttr.show = true;
             this.$nextTick(_ => {
                 this.$refs.save.$refs.input.focus();
@@ -213,7 +263,7 @@ var app = new Vue({
             if (this.user.pass!=''&&
                 this.user.passpass!=''&&
                 !(this.user.pass===this.user.passpass)) {
-                this.$notify.error({
+                _this.$notify.error({
                     title: '密码不一致',
                     message: '两次输入的密码不同, 请重新输入.'
                 });
@@ -235,7 +285,8 @@ var app = new Vue({
 
             ok = ok && (this.user.pass===this.user.passpass)
 
-            return ok
+            return true
+            // return ok
         },
         canGetTip() {
             let ok = true
@@ -243,7 +294,8 @@ var app = new Vue({
             ok = ok && this.user.SFZ!=''
             ok = ok && this.user.SJ!=''
             ok = ok && this.user.YX!=''
-            return ok
+            return true
+            // return ok
         },
         canChangePass() {
             let ok = true
@@ -252,14 +304,16 @@ var app = new Vue({
             ok = ok && this.user.SFZ!=''
             ok = ok && this.user.SJ!=''
             ok = ok && this.user.YX!=''
-            return ok
+            return true
+            // return ok
         },
         canLogin() {
             let ok = true
             ok = ok && this.user.name!=''
             ok = ok && this.user.pass!=''
 
-            return ok
+            return true
+            // return ok
         },
     }
   })

@@ -175,12 +175,12 @@
                     <p>Modify Password</p>
                 </el-col>
                 <el-col :span="12" class="right">
-                    <el-button 
+                    <!-- <el-button 
                     type="info" 
                     icon="el-icon-edit"
                     @click="GenPolicy()"
                     alt="生成policy"
-                    circle></el-button>
+                    circle></el-button> -->
                     <el-button 
                     type="success" 
                     icon="el-icon-check" 
@@ -201,8 +201,7 @@
                     placeholder="Password"                
                     type="password"
                     prefix-icon="el-icon-caret-right"
-                    v-model="user.pass"                
-                    @change="confirmPass()"
+                    v-model="user.pass"
                     clearable>
                     </el-input>
                     <el-input
@@ -245,7 +244,7 @@
                     style="display:inline-block"
                     >自设属性</el-button>
                 </el-col>
-                <el-col :span="24">用户属性:</el-col>
+                <!-- <el-col :span="24">用户属性:</el-col>
                 <el-col :span="24">
                     <el-tag class="margin-3" type="info">UN:{{user.name}}</el-tag>
                     <el-tag class="margin-3" type="info">SFZ:{{user.SFZ}}</el-tag>
@@ -279,7 +278,7 @@
                     placeholder="tip policy"
                     v-model="user.policy.tip">
                     </el-input>
-                </el-col>
+                </el-col> -->
             </el-tab-pane>
             <el-tab-pane label="T">
                 <span slot="label"><i class="el-icon-menu"></i> 提示</span>
@@ -365,13 +364,12 @@
         </el-tabs>
     </el-row>
     <el-row>
-        
-            <div class="scroll-area">
-                <div class="scroll">
-                    <span class="today-scroll-content">复旦ABE</span>
-                    <span class="today-scroll-content">ABE中的战斗机 oh~yeah~</span>
-                </div>
+        <div class="scroll-area">
+            <div class="scroll">
+                <span class="today-scroll-content">复旦ABE</span>
+                <span class="today-scroll-content">ABE中的战斗机 oh~yeah~</span>
             </div>
+        </div>
     </el-row>
     </el-main>
     <el-footer><p class="center"><code>{{info.footer}}</code></p></el-footer>
