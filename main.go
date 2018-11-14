@@ -10,8 +10,9 @@ import (
 
 func main() {
 	//这两句是为了可以直接访问静态文件
-	beego.InsertFilter("/", beego.BeforeRouter, TransparentStatic)
-	beego.InsertFilter("/main.html", beego.BeforeRouter, TransparentStatic)
+	//beego.InsertFilter("/", beego.BeforeRouter, TransparentStatic)
+	//beego.InsertFilter("/main.html", beego.BeforeRouter, TransparentStatic)
+	beego.SetStaticPath("/","static")
 
 	beego.Run()
 }
