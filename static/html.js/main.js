@@ -263,7 +263,7 @@ var app = new Vue({
             if (this.user.pass!=''&&
                 this.user.passpass!=''&&
                 !(this.user.pass===this.user.passpass)) {
-                _this.$notify.error({
+                this.$notify.error({
                     title: '密码不一致',
                     message: '两次输入的密码不同, 请重新输入.'
                 });
