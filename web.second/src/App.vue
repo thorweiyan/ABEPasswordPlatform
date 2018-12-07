@@ -12,7 +12,7 @@
     </el-main>
 
     <el-footer>
-       <Footer/>
+      <Footer/>
     </el-footer>
 
   </el-container>
@@ -25,19 +25,20 @@ import Footer from './components/Footer.vue';
 /* eslint-disable */
 export default {
   name: 'app',
+  data(){
+    return{
+      name:"container",
+    }
+  },
   components: {
     Header,
     Footer,
     User,
   },
-  methods:{
-
-  },
-  created(){
-
-  },
+  methods:{},
+  created(){},
   mounted(){
-    console.log(this.User)
+    console.log(this.name)
   },
 }
 </script>
