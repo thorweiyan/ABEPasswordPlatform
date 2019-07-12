@@ -10,7 +10,7 @@ import (
 
 type Chaincode struct {
 	MyId        string
-	Initialized bool
+	// Initialized bool
 	AAList      []string //pubkey
 	N           int      //所有aa的数量
 	T           int      //阈值
@@ -30,9 +30,9 @@ func (t *Chaincode) registerToSYS(stub shim.ChaincodeStubInterface, pubkey strin
 }
 
 func (t *Chaincode) updateAAList(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if t.Initialized {
-		return shim.Error("Already initialized")
-	}
+	// if t.Initialized {
+	// 	return shim.Error("Already initialized")
+	// }
 	if len(args) != 3 {
 		return shim.Error("Incorrect number of arguments. Expecting 3")
 	}
@@ -69,9 +69,9 @@ func (t *Chaincode) updateAAList(stub shim.ChaincodeStubInterface, args []string
 
 //args: r s "startABE1"
 func (t *Chaincode) startABE1(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if t.Initialized {
-		return shim.Error("Already initialized")
-	}
+	// if t.Initialized {
+	// 	return shim.Error("Already initialized")
+	// }
 	if len(args) != 3 {
 		return shim.Error("Incorrect number of arguments. Expecting 3")
 	}
@@ -91,9 +91,9 @@ func (t *Chaincode) startABE1(stub shim.ChaincodeStubInterface, args []string) p
 
 //args: r s "startABE2"
 func (t *Chaincode) startABE2(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if t.Initialized {
-		return shim.Error("Already initialized")
-	}
+	// if t.Initialized {
+	// 	return shim.Error("Already initialized")
+	// }
 	if len(args) != 3 {
 		return shim.Error("Incorrect number of arguments. Expecting 3")
 	}
@@ -117,9 +117,9 @@ func (t *Chaincode) startABE2(stub shim.ChaincodeStubInterface, args []string) p
 
 //args: r s "startABE3"
 func (t *Chaincode) startABE3(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if t.Initialized {
-		return shim.Error("Already initialized")
-	}
+	// if t.Initialized {
+	// 	return shim.Error("Already initialized")
+	// }
 	if len(args) != 3 {
 		return shim.Error("Incorrect number of arguments. Expecting 3")
 	}
@@ -131,11 +131,11 @@ func (t *Chaincode) startABE3(stub shim.ChaincodeStubInterface, args []string) p
 	//AAsetup3
 	//集齐其他t-1个aa的Pki，生成e(g,g)^alpha
 	wrapper.AASetup3(t.PKi, t.Aid)
-	t.Initialized = true
-	err = stub.PutState("Initialized", []byte("true"))
-	if err != nil {
-		return shim.Error("Put Initialized error: " + err.Error())
-	}
+	// t.Initialized = true
+	// err = stub.PutState("Initialized", []byte("true"))
+	// if err != nil {
+	// 	return shim.Error("Put Initialized error: " + err.Error())
+	// }
 	return shim.Success(nil)
 }
 
@@ -478,9 +478,9 @@ func (t *Chaincode) userMethod(stub shim.ChaincodeStubInterface, args []string) 
 	if len(args) != 4 {
 		return shim.Error("userMethod:Incorrect number of arguments. Expecting 4")
 	}
-	if !t.Initialized {
-		return shim.Error("userMethod:Not initialized")
-	}
+	// if !t.Initialized {
+	// 	return shim.Error("userMethod:Not initialized")
+	// }
 	rightOwner, err := wrapper.IsOwner(stub, args[1:])
 	if !rightOwner {
 		return shim.Error("userMethod:"+err.Error())
@@ -778,15 +778,15 @@ func (t *Chaincode) recoverParams(stub shim.ChaincodeStubInterface, args []strin
 		return shim.Error(err.Error())
 	}
 	//获取initialize等
-	temp, err := stub.GetState("Initialized")
-	if err != nil {
-		return shim.Error("Get Initialized error: " + err.Error())
-	}
-	if string(temp) == "true"{
-		t.Initialized = true
-	}else {
-		t.Initialized = false
-	}
+	// temp, err := stub.GetState("Initialized")
+	// if err != nil {
+	// 	return shim.Error("Get Initialized error: " + err.Error())
+	// }
+	// if string(temp) == "true"{
+	// 	t.Initialized = true
+	// }else {
+	// 	t.Initialized = false
+	// }
 
 	temp, err = stub.GetState("MyId")
 	if err != nil {
@@ -907,11 +907,11 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	}
 	t.TempUserParams = make(map[string]wrapper.UserData,1000)
 
-	t.Initialized = false
-	err = stub.PutState("Initialized", []byte("false"))
-	if err != nil {
-		return shim.Error("Put Initialized error: " + err.Error())
-	}
+	// t.Initialized = false
+	// err = stub.PutState("Initialized", []byte("false"))
+	// if err != nil {
+	// 	return shim.Error("Put Initialized error: " + err.Error())
+	// }
 	return shim.Success(nil)
 }
 

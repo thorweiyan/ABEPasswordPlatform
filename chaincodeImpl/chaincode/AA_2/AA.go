@@ -10,7 +10,7 @@ import (
 
 type Chaincode struct {
 	MyId        string
-	Initialized bool
+	// Initialized bool
 	AAList      []string //pubkey
 	N           int      //所有aa的数量
 	T           int      //阈值
@@ -21,7 +21,6 @@ type Chaincode struct {
 	TempUserParams map[string]wrapper.UserData
 }
 
-
 //---------------------------  初始化阶段  ---------------------------------------
 //***************************  Communicate with SYS  ***************************
 
@@ -31,9 +30,9 @@ func (t *Chaincode) registerToSYS(stub shim.ChaincodeStubInterface, pubkey strin
 }
 
 func (t *Chaincode) updateAAList(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if t.Initialized {
-		return shim.Error("Already initialized")
-	}
+	// if t.Initialized {
+	// 	return shim.Error("Already initialized")
+	// }
 	if len(args) != 3 {
 		return shim.Error("Incorrect number of arguments. Expecting 3")
 	}
@@ -70,9 +69,9 @@ func (t *Chaincode) updateAAList(stub shim.ChaincodeStubInterface, args []string
 
 //args: r s "startABE1"
 func (t *Chaincode) startABE1(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if t.Initialized {
-		return shim.Error("Already initialized")
-	}
+	// if t.Initialized {
+	// 	return shim.Error("Already initialized")
+	// }
 	if len(args) != 3 {
 		return shim.Error("Incorrect number of arguments. Expecting 3")
 	}
@@ -92,9 +91,9 @@ func (t *Chaincode) startABE1(stub shim.ChaincodeStubInterface, args []string) p
 
 //args: r s "startABE2"
 func (t *Chaincode) startABE2(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if t.Initialized {
-		return shim.Error("Already initialized")
-	}
+	// if t.Initialized {
+	// 	return shim.Error("Already initialized")
+	// }
 	if len(args) != 3 {
 		return shim.Error("Incorrect number of arguments. Expecting 3")
 	}
@@ -118,9 +117,9 @@ func (t *Chaincode) startABE2(stub shim.ChaincodeStubInterface, args []string) p
 
 //args: r s "startABE3"
 func (t *Chaincode) startABE3(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if t.Initialized {
-		return shim.Error("Already initialized")
-	}
+	// if t.Initialized {
+	// 	return shim.Error("Already initialized")
+	// }
 	if len(args) != 3 {
 		return shim.Error("Incorrect number of arguments. Expecting 3")
 	}
@@ -132,11 +131,11 @@ func (t *Chaincode) startABE3(stub shim.ChaincodeStubInterface, args []string) p
 	//AAsetup3
 	//集齐其他t-1个aa的Pki，生成e(g,g)^alpha
 	wrapper.AASetup3(t.PKi, t.Aid)
-	t.Initialized = true
-	err = stub.PutState("Initialized", []byte("true"))
-	if err != nil {
-		return shim.Error("Put Initialized error: " + err.Error())
-	}
+	// t.Initialized = true
+	// err = stub.PutState("Initialized", []byte("true"))
+	// if err != nil {
+	// 	return shim.Error("Put Initialized error: " + err.Error())
+	// }
 	return shim.Success(nil)
 }
 
@@ -458,6 +457,20 @@ func (t *Chaincode) attrToSTR(stub shim.ChaincodeStubInterface) error {
 	return nil
 }
 
+func (t *Chaincode) companyDataToSTR(stub shim.ChaincodeStubInterface, companyData wrapper.CompanyData, userSk []byte) error {
+	cypherText := wrapper.Encrypt(companyData.UserName, companyData.ChangePasswordPolicy)
+	passparams, err := wrapper.SignTransaction(stub, []string{userData.UserName, string(cypherText)})
+	if err != nil {
+		return fmt.Errorf("userChangePasswordDataToSTR: " + err.Error())
+	}
+	passparams = append([]string{"STRcc", "put", "ChangePasswordData", t.MyId}, passparams...)
+	response := wrapper.Call(stub, passparams)
+	if response.Status != 200 {
+		return fmt.Errorf("userChangePasswordDataToSTR: " + response.Message)
+	}
+	return nil
+}
+
 //---------------------------  初始化之后     ---------------------------
 //***************************  User method  ***************************
 //args: method r s serializedData
@@ -465,9 +478,9 @@ func (t *Chaincode) userMethod(stub shim.ChaincodeStubInterface, args []string) 
 	if len(args) != 4 {
 		return shim.Error("userMethod:Incorrect number of arguments. Expecting 4")
 	}
-	if !t.Initialized {
-		return shim.Error("userMethod:Not initialized")
-	}
+	// if !t.Initialized {
+	// 	return shim.Error("userMethod:Not initialized")
+	// }
 	rightOwner, err := wrapper.IsOwner(stub, args[1:])
 	if !rightOwner {
 		return shim.Error("userMethod:"+err.Error())
@@ -486,6 +499,8 @@ func (t *Chaincode) userMethod(stub shim.ChaincodeStubInterface, args []string) 
 		return t.userGetTip(stub, args[3:])
 	case "userGetTipSpecial":
 		return t.userOthersSpecial(stub, args[3:])
+	case "userUpdateData":
+		return t.userUpdateData(stub, args[3:])
 	default:
 		return shim.Error("Invalid invoke function name. Expecting \"userSignUp\" \"userSignUpSpecial\" \"userChangePassword\" " +
 			"\"userChangePasswordSpecial\" \"userGetTip\" \"userGetTipSpecial\" ")
@@ -763,15 +778,15 @@ func (t *Chaincode) recoverParams(stub shim.ChaincodeStubInterface, args []strin
 		return shim.Error(err.Error())
 	}
 	//获取initialize等
-	temp, err := stub.GetState("Initialized")
-	if err != nil {
-		return shim.Error("Get Initialized error: " + err.Error())
-	}
-	if string(temp) == "true"{
-		t.Initialized = true
-	}else {
-		t.Initialized = false
-	}
+	// temp, err := stub.GetState("Initialized")
+	// if err != nil {
+	// 	return shim.Error("Get Initialized error: " + err.Error())
+	// }
+	// if string(temp) == "true"{
+	// 	t.Initialized = true
+	// }else {
+	// 	t.Initialized = false
+	// }
 
 	temp, err = stub.GetState("MyId")
 	if err != nil {
@@ -892,11 +907,11 @@ func (t *Chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	}
 	t.TempUserParams = make(map[string]wrapper.UserData,1000)
 
-	t.Initialized = false
-	err = stub.PutState("Initialized", []byte("false"))
-	if err != nil {
-		return shim.Error("Put Initialized error: " + err.Error())
-	}
+	// t.Initialized = false
+	// err = stub.PutState("Initialized", []byte("false"))
+	// if err != nil {
+	// 	return shim.Error("Put Initialized error: " + err.Error())
+	// }
 	return shim.Success(nil)
 }
 
