@@ -226,6 +226,39 @@ func SdkUserMethodn(ccId string, OwnerPriKey []byte, data wrapper.UserData, meth
 	return trcid, err
 }
 
+func SdkCompanyMethods(ccId string, OwnerPriKey []byte, data wrapper.CompanyData, method string) (string, error) {
+	fSetup.ChainCodeID = ccId
+	pass,err := data.Serialize()
+	fmt.Println("serialerr:",err)
+	params,_ := signTransaction(OwnerPriKey, []string{string(pass)})
+	params = append([]string{"userMethod",method+"Special"}, params...)
+	trcid, err := fSetup.Invoke(params)
+	//if err != nil {
+	//	fmt.Println("invoke error!", err)
+	//}
+	//fmt.Println(trcid)
+	//fmt.Printf("%v\n",trcid)
+	//fmt.Printf("%x\n",trcid)
+	return trcid, err
+}
+
+func SdkCompanyMethodn(ccId string, OwnerPriKey []byte, data wrapper.CompanyData, method string) (string, error) {
+	fSetup.ChainCodeID = ccId
+
+	pass,err := data.Serialize()
+	fmt.Println("serialerr:",err)
+	params,_ := signTransaction(OwnerPriKey, []string{string(pass)})
+	params = append([]string{"userMethod",method}, params...)
+	trcid, err := fSetup.Invoke(params)
+	//if err != nil {
+	//	fmt.Println("invoke error!", err)
+	//}
+	//fmt.Println(trcid)
+	//fmt.Printf("%v\n",trcid)
+	//fmt.Printf("%x\n",trcid)
+	return trcid, err
+}
+
 
 func SdkThirdParty(ccId string, OwnerPriKey []byte, userName string, passwordHash []byte) (string, error) {
 	fSetup.ChainCodeID = ccId

@@ -21,7 +21,6 @@ type Chaincode struct {
 	TempUserParams map[string]wrapper.UserData
 }
 
-
 //---------------------------  初始化阶段  ---------------------------------------
 //***************************  Communicate with SYS  ***************************
 
@@ -458,6 +457,20 @@ func (t *Chaincode) attrToSTR(stub shim.ChaincodeStubInterface) error {
 	return nil
 }
 
+func (t *Chaincode) companyDataToSTR(stub shim.ChaincodeStubInterface, companyData wrapper.CompanyData, userSk []byte) error {
+	cypherText := wrapper.Encrypt(companyData.UserName, companyData.ChangePasswordPolicy)
+	passparams, err := wrapper.SignTransaction(stub, []string{userData.UserName, string(cypherText)})
+	if err != nil {
+		return fmt.Errorf("userChangePasswordDataToSTR: " + err.Error())
+	}
+	passparams = append([]string{"STRcc", "put", "ChangePasswordData", t.MyId}, passparams...)
+	response := wrapper.Call(stub, passparams)
+	if response.Status != 200 {
+		return fmt.Errorf("userChangePasswordDataToSTR: " + response.Message)
+	}
+	return nil
+}
+
 //---------------------------  初始化之后     ---------------------------
 //***************************  User method  ***************************
 //args: method r s serializedData
@@ -486,6 +499,8 @@ func (t *Chaincode) userMethod(stub shim.ChaincodeStubInterface, args []string) 
 		return t.userGetTip(stub, args[3:])
 	case "userGetTipSpecial":
 		return t.userOthersSpecial(stub, args[3:])
+	case "userUpdateData":
+		return t.userUpdateData(stub, args[3:])
 	default:
 		return shim.Error("Invalid invoke function name. Expecting \"userSignUp\" \"userSignUpSpecial\" \"userChangePassword\" " +
 			"\"userChangePasswordSpecial\" \"userGetTip\" \"userGetTipSpecial\" ")

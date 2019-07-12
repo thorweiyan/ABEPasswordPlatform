@@ -48,6 +48,38 @@ func DoSdk(userdata wrapper.UserData, method string) (string, error) {
 	return result, err
 }
 
+func DoSdk2(companydata wrapper.CompanyData, method string) (string, error) {
+	fmt.Printf("xxxxxxxxxxxxxxxx----------------%v\n",companydata)
+	//return "sdad"
+	//调用special AA合约
+	special := Rand2(big.NewInt(0)).Int64()
+	sId := "AA_" + strconv.Itoa(int(special))
+	sccId := sId + "cc"
+	fmt.Println("special ccId: ", sccId)
+
+	sOwnerPriKey,_ := hex.DecodeString(AAkey[special-1].prikey)
+	//fmt.Println("sOwnerPriKey: ", sOwnerPriKey)
+	fmt.Println("method: ", method+"Special")
+
+	result, err := models.SdkCompanyMethods(sccId, sOwnerPriKey, companydata, method)
+	if err != nil{
+		return result, err
+	}
+
+	//调用normal AA合约
+	companydata.SpecialAAId = sId
+
+	normal := Rand2(big.NewInt(special)).Int64()
+	nccId := "AA_" + strconv.Itoa(int(normal)) + "cc"
+	fmt.Println("normal ccId: ", nccId)
+
+	nOwnerPriKey,_ := hex.DecodeString(AAkey[normal-1].prikey)
+	//fmt.Println("nOwnerPriKey: ", nOwnerPriKey)
+
+	result,err = models.SdkCompanyMethodn(nccId, nOwnerPriKey, companydata, method)
+	return result, err
+}
+
 //传进来一个数值，生成除了这个数值外的任意一个随机数
 func Rand2(ex *big.Int) (index *big.Int) {
 	max := big.NewInt(3)

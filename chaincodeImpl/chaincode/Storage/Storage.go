@@ -95,6 +95,16 @@ func (t *Chaincode) put(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 			return shim.Error("Incorrect number of arguments. Expecting 6")
 		}
 		return t.putABEAttr(stub, args[1:])
+	case "Data":
+		if len(args) != 6 {
+			return shim.Error("Incorrect number of arguments. Expecting 6")
+		}
+		return t.putData(stub, args[1:])
+	case "AuthData":
+		if len(args) != 6 {
+			return shim.Error("Incorrect number of arguments. Expecting 6")
+		}
+		return t.putAuthData(stub, args[1:])
 	default:
 		return shim.Error("Can't match any one")
 	}
@@ -153,6 +163,18 @@ func (t *Chaincode) get(stub shim.ChaincodeStubInterface, args []string) pb.Resp
 		}
 		result2 = append([]byte("\n\n"),result2...)
 		return shim.Success(append(result,result2...))
+	case "Data":
+		result, err := stub.GetState("Data_" + args[4])
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(result)
+	case "AuthData":
+		result, err := stub.GetState("AuthData_" + args[4])
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		return shim.Success(result)
 	default:
 		return shim.Error("Can't match any one")
 	}
@@ -261,6 +283,73 @@ func (t *Chaincode) putUserTip(stub shim.ChaincodeStubInterface, args []string) 
 	}
 	return shim.Success(nil)
 }
+
+func (t *Chaincode) putData(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	//AA初始化
+	isInit, err := t.isAAInitialized(stub)
+	if !isInit {
+		return shim.Error("AA isn't Initialized!")
+	}
+	//是不是AA调用的
+	rightCreator, err := wrapper.IsAA(stub, args)
+	if (err != nil) || !rightCreator {
+		return shim.Error("Putting Data: " + err.Error())
+	}
+	//去掉rs
+	args = args[3:]
+	//数据是否已有
+	_ , err = stub.GetState("Data_" + args[0])
+	if err == nil {
+		return shim.Error("DataName conflicts: " + err.Error())
+	}
+	//写入数据
+	err = stub.PutState("Data_"+args[0], []byte(args[1]))
+	if err != nil {
+		return shim.Error("Putting Data: " + err.Error())
+	}
+	return shim.Success(nil)
+}
+
+func (t *Chaincode) putAuthData(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	//AA初始化
+	isInit, err := t.isAAInitialized(stub)
+	if !isInit {
+		return shim.Error("AA isn't Initialized!")
+	}
+	//是不是AA调用的
+	rightCreator, err := wrapper.IsAA(stub, args)
+	if (err != nil) || !rightCreator {
+		return shim.Error("Putting AuthData: " + err.Error())
+	}
+	//去掉rs
+	args = args[3:]
+	//数据是否已有
+	list , err := stub.GetState("AuthData_" + args[0])
+	var al *wrapper.AuthList
+	if err == nil {
+		al, err = wrapper.DeserializeAuthList(list)
+		if err != nil {
+			return shim.Error("Putting AuthData: " + err.Error())
+		}
+
+	}else {
+		al = new(wrapper.AuthList)
+		al.Auths = []string{}
+	}
+	//添加新数据
+	al.Auths = append(al.Auths, args[1])
+	putData, err := al.Serialize()
+	if err != nil {
+		return shim.Error("Putting AuthData: " + err.Error())
+	}
+	err = stub.PutState("AuthData_"+args[0], putData)
+	if err != nil {
+		return shim.Error("Putting AuthData: " + err.Error())
+	}
+
+	return shim.Success(nil)
+}
+
 //args: AA_id r s attrs NowAttr
 func (t *Chaincode) putABEAttr(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	//是不是AA调用的
@@ -289,8 +378,6 @@ func (t *Chaincode) putABEAttr(stub shim.ChaincodeStubInterface, args []string) 
 	return shim.Success(nil)
 }
 
-
-//args:
 func (t *Chaincode) getAAList(stub shim.ChaincodeStubInterface, aaid string) ([]byte, error) {
 	aaListLength, err := stub.GetState("AAListLength")
 	if err != nil {

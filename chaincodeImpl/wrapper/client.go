@@ -1,16 +1,16 @@
 package wrapper
 
 import (
-	"log"
 	"net/rpc"
+	"fmt"
 )
 
-var RPCADDRESS string = "localhost:9999"
+var RPCADDRESS string = "localhost:10000"
 
 func dial() *rpc.Client {
 	client, err := rpc.DialHTTP("tcp", RPCADDRESS)
 	if err != nil {
-		log.Fatal("dialing:", err)
+		fmt.Println("dialing:", err)
 	}
 	return client
 }
@@ -26,7 +26,7 @@ func SYSInit(t, n int) []byte {
 	var reply []byte
 	err := client.Call("MAFF.SYSInit", args, &reply)
 	if err != nil {
-		log.Fatal("MAFF error:", err)
+		fmt.Println("MAFF error:", err)
 	}
 
 	return reply
@@ -44,7 +44,7 @@ func AASetup1(pubkey, aapubkey []byte)(int,int) {
 	setup1 := Setup1{Pubkey:pubkey,AAaid:aapubkey}
 	err := client.Call("MAFF.AASetup1", setup1, &reply)
 	if err != nil {
-		log.Fatal("MAFF error:", err)
+		fmt.Println("MAFF error:", err)
 	}
 
 	return reply.T,reply.N
@@ -56,7 +56,7 @@ func AACommunicate(aaList []string) []string{
 	var reply []string
 	err := client.Call("MAFF.AACommunicate", aaList, &reply)
 	if err != nil {
-		log.Fatal("MAFF error:", err)
+		fmt.Println("MAFF error:", err)
 	}
 
 	return reply
@@ -68,7 +68,7 @@ func AppendSij(sij string) bool{
 	var reply bool
 	err := client.Call("MAFF.AppendSij", sij, &reply)
 	if err != nil {
-		log.Fatal("MAFF error:", err)
+		fmt.Println("MAFF error:", err)
 	}
 
 	return reply
@@ -83,7 +83,7 @@ func AASetup2()([]byte,[]byte) {
 	var reply Setup2
 	err := client.Call("MAFF.AASetup2", "", &reply)
 	if err != nil {
-		log.Fatal("MAFF error:", err)
+		fmt.Println("MAFF error:", err)
 	}
 
 	return reply.Pki, reply.Aid
@@ -99,7 +99,7 @@ func AASetup3(pki,aid [][]byte) {
 	var reply []byte
 	err := client.Call("MAFF.AASetup3", args, &reply)
 	if err != nil {
-		log.Fatal("MAFF error:", err)
+		fmt.Println("MAFF error:", err)
 	}
 }
 
@@ -114,7 +114,7 @@ func MarshalMap() ([]byte,int,error) {
 	var reply *Mmap
 	err := client.Call("MAFF.MarshalMap", "", &reply)
 	if err != nil {
-		log.Fatal("MAFF error:", err)
+		fmt.Println("MAFF error:", err)
 	}
 	return reply.Map, reply.NowLen, err
 }
@@ -126,7 +126,7 @@ func UnMarshalMap(attrs []byte, nowlen int) (error) {
 	args := Mmap{Map:attrs, NowLen:nowlen}
 	err := client.Call("MAFF.UnMarshalMap", args, &reply)
 	if err != nil {
-		log.Fatal("MAFF error:", err)
+		fmt.Println("MAFF error:", err)
 	}
 	return err
 }
@@ -137,7 +137,7 @@ func IsUserExists(userName string)(bool) {
 	var reply bool
 	err := client.Call("MAFF.IsUserExists", userName, &reply)
 	if err != nil {
-		log.Fatal("MAFF error:", err)
+		fmt.Println("MAFF error:", err)
 	}
 	return reply
 }
@@ -148,7 +148,7 @@ func AddAttr(userAttributes []string) error{
 	var reply []byte
 	err := client.Call("MAFF.AddAttr", userAttributes, &reply)
 	if err != nil {
-		log.Fatal("MAFF error:", err)
+		fmt.Println("MAFF error:", err)
 	}
 	return err
 }
@@ -159,7 +159,7 @@ func PartUserSkGen(attrs []string) ([]byte, error) {
 	var reply []byte
 	err := client.Call("MAFF.PartUserSkGen", attrs, &reply)
 	if err != nil {
-		log.Fatal("MAFF error:", err)
+		fmt.Println("MAFF error:", err)
 	}
 	return reply,err
 }
@@ -174,7 +174,7 @@ func KeyGen(partSk [][]byte, aid [][]byte) []byte {
 	var reply []byte
 	err := client.Call("MAFF.KeyGen", args, &reply)
 	if err != nil {
-		log.Fatal("MAFF error:", err)
+		fmt.Println("MAFF error:", err)
 	}
 	return reply
 }
@@ -189,7 +189,7 @@ func Encrypt(message string, policy string) []byte {
 	var reply []byte
 	err := client.Call("MAFF.Encrypt", args, &reply)
 	if err != nil {
-		log.Fatal("MAFF error:", err)
+		fmt.Println("MAFF error:", err)
 	}
 	return reply
 }
@@ -204,7 +204,7 @@ func Decrypt(secretKey []byte, cryptText []byte) ([]byte, error) {
 	var reply []byte
 	err := client.Call("MAFF.Decrypt", args, &reply)
 	if err != nil {
-		log.Fatal("MAFF error:", err)
+		fmt.Println("MAFF error:", err)
 	}
 	return reply, err
 }

@@ -6,6 +6,7 @@ import (
 "fmt"
 "github.com/thorweiyan/fabric_go_sdk"
 	"encoding/hex"
+	"strings"
 )
 var fSetup = fabric_go_sdk.FabricSetup{
 	// Network parameters
@@ -52,8 +53,8 @@ func TestAll(t *testing.T) {
 	TestStartABE32(t)
 	TestStartABE33(t)
 
-	TestUserMethodsignups1(t)
-	TestUserMethodsignupn2(t)
+	//TestUserMethodsignups1(t)
+	//TestUserMethodsignupn2(t)
 	//TestUserMethodsignups1(t)
 	//TestUserMethodsignupn2(t)
 	//
@@ -427,11 +428,11 @@ func TestUserMethodsignupn2(t *testing.T) {
 }
 
 func TestUserMethodChanges1(t *testing.T) {
-	fSetup.ChainCodeID = "AA_1cc"
+	fSetup.ChainCodeID = "AA_2cc"
 	fSetup.ChaincodeVersion = "1"
-	aa1prikey,_ := hex.DecodeString("3068020101041c359724a4ffdbe790e10fec6de810f8aee1c526dd15d383b9a113b6b6a00706052b81040021a13c033a0004e3dd49e00dce869da09afc266d707a3e59377d28aded9d8f264ab890790aa92735f7ca9df8507a1d0823092e29ab7d74336dd9938521c479")
-	data := UserData{UserName:"UN:czn",UserPasswordHash:[]byte("cznzuishuai")}
-	data.UserAttributes= []string{"UN:czn","BD:19970212","SFZ:3xxxxxxxxxxxxxxxxxx1","YX:czn@fudan.edu.cn","ZS:dog"}
+	aa1prikey,_ := hex.DecodeString("3068020101041cd599de5c3c9d65903a263ee6d0d6df6fe7acb6616642aed261a4bac2a00706052b81040021a13c033a0004a579d5b6764ae6b0f2f302d8717b4c8bb866ab6915be971798447d1918ec0ea739950ab7784a389e60a0f077ade960ae0e53d353f247c581")
+	data := UserData{UserName:"UN:roy",UserPasswordHash:[]byte("cznzuishuai")}
+	data.UserAttributes= strings.Split("UN:roy,SFZ:678987000236787654,SJ:17317301908,ZS:shuai,ZS:hei",",")
 	pass,err := data.Serialize()
 	fmt.Println("serialerr:",err)
 	params,_ := signTransaction(aa1prikey, []string{string(pass)})
@@ -446,13 +447,13 @@ func TestUserMethodChanges1(t *testing.T) {
 }
 
 func TestUserMethodChangen2(t *testing.T) {
-	fSetup.ChainCodeID = "AA_2cc"
+	fSetup.ChainCodeID = "AA_3cc"
 	fSetup.ChaincodeVersion = "1"
-	aa1prikey,_ := hex.DecodeString("3068020101041cd599de5c3c9d65903a263ee6d0d6df6fe7acb6616642aed261a4bac2a00706052b81040021a13c033a0004a579d5b6764ae6b0f2f302d8717b4c8bb866ab6915be971798447d1918ec0ea739950ab7784a389e60a0f077ade960ae0e53d353f247c581")
-	data := UserData{UserName:"UN:czn"}
-	data.UserAttributes= []string{"UN:czn","BD:19970212","SFZ:3xxxxxxxxxxxxxxxxxx1","YX:czn@fudan.edu.cn","ZS:dog"}
+	aa1prikey,_ := hex.DecodeString("3068020101041c56a7bc34c3901d167d8d563c922b3ac0f2c2d3e0a6fa05e51bef493fa00706052b81040021a13c033a0004142100e66804198329ee8ac6e389f4d4448523f3cb13135f4fd4e0bfa816b00b7f5e53ae6d16c9a23dd8c0a7913934a6d19013a641a8cc8d")
+	data := UserData{UserName:"UN:roy"}
+	data.UserAttributes= strings.Split("UN:roy,SFZ:678987000236787654,SJ:17317301908,ZS:shuai,ZS:hei",",")
 	//
-	data.SpecialAAId = "AA_1"
+	data.SpecialAAId = "AA_2"
 	pass,err := data.Serialize()
 	fmt.Println("serialerr:",err)
 	params,_ := signTransaction(aa1prikey, []string{string(pass)})
@@ -538,6 +539,23 @@ func TestThirdParty(t *testing.T) {
 		fmt.Errorf("sendToAA AASecret" + err.Error())
 	}
 	passParams = append([]string{"thirdVerify"}, passParams...)
+	trcid, err := fSetup.Invoke(passParams)
+	if err != nil {
+		fmt.Println("invoke error!", err)
+	}
+	fmt.Println(trcid)
+	fmt.Printf("%x\n",trcid)
+}
+
+func TestRecover(t *testing.T) {
+	fSetup.ChainCodeID = "AA_2cc"
+	fSetup.ChaincodeVersion = "1"
+	aa1prikey,_ := hex.DecodeString("3068020101041cd599de5c3c9d65903a263ee6d0d6df6fe7acb6616642aed261a4bac2a00706052b81040021a13c033a0004a579d5b6764ae6b0f2f302d8717b4c8bb866ab6915be971798447d1918ec0ea739950ab7784a389e60a0f077ade960ae0e53d353f247c581")
+	passParams, err := signTransaction(aa1prikey,[]string{"recoverParams","shabi"})
+	if err != nil {
+		fmt.Errorf("sendToAA AASecret" + err.Error())
+	}
+	passParams = append([]string{"recoverParams"}, passParams...)
 	trcid, err := fSetup.Invoke(passParams)
 	if err != nil {
 		fmt.Println("invoke error!", err)

@@ -32,9 +32,13 @@ func (c *LoginController)Post() {
 
 	passwordhash := []byte(u.UserPasswordHash)
 
-	models.SdkThirdParty(sccId, sOwnerPriKey, u.UserName, passwordhash)
-
-	//正确执行，返回200
-	c.Ctx.ResponseWriter.ResponseWriter.WriteHeader(200)
-	c.Ctx.WriteString("200")
+	_,err := models.SdkThirdParty(sccId, sOwnerPriKey, u.UserName, passwordhash)
+	if err == nil {
+		//正确执行，返回200
+		c.Ctx.ResponseWriter.ResponseWriter.WriteHeader(200)
+		c.Ctx.WriteString("password right")
+	}else {
+		c.Ctx.ResponseWriter.ResponseWriter.WriteHeader(200)
+		c.Ctx.WriteString("password wrong")
+	}
 }
